@@ -1,4 +1,4 @@
-#### ⚠️ Do not download APKs or modules from random websites you find on Google, as they may be dangerous and because providers impersonate ReVanced/ReVanced Extended/Morphe. Please build your application from official sources or use open source builders like this one.
+#### ⚠️ Avoid downloading APKs or modules from untrusted websites, as they may be harmful and impersonate official ReVanced/ReVanced Extended/Morphe projects. Always build from official sources or trusted open-source builders like this one.
 
 # ReVanced x Morphe Builder
 
