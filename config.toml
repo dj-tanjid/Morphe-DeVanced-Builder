@@ -21,7 +21,8 @@ arch = "arm64-v8a"
 # version = "21.05.264"
 # version = "21.06.261"
 # version = "21.07.243"
-version = "21.08.265"
+version = "21.08.270"
+# version = "21.09.260"
 excluded-patches = """\
     'Custom branding name for YouTube' \
     'Custom branding icon for YouTube' \
@@ -48,6 +49,7 @@ arch = "arm64-v8a"
 # version = "9.05.52"
 # version = "9.06.51"
 version = "9.07.51"
+# version = "9.08.51"
 excluded-patches = """\
     'Custom branding name for YouTube Music' \
     'Custom branding icon for YouTube Music' \
