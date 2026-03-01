@@ -31,7 +31,7 @@ This ReVanced/Morphe builder creates both APKs and [Magisk](https://github.com/t
 
 ## Installation
 ### Non-root users
-- Install the [ReVanced GmsCore app](https://github.com/ReVanced/GmsCore/releases/latest) or the [Morphe MicroG-RE app](https://github.com/MorpheApp/MicroG-RE/releases/latest).
+- Install [ReVanced GmsCore](https://github.com/ReVanced/GmsCore/releases/latest) or [Morphe MicroG-RE](https://github.com/MorpheApp/MicroG-RE/releases/latest).
 - Download the APK files you want to install from the [releases page](../../releases/latest).
 - (Optional) Import one of my [**Custom Settings**](../teejay/custom_settings-by_tanjid) into your application. [*How to do this?*](../teejay/?tab=readme-ov-file#import-custom-settings-in-revancedmorphe-applications)
 - Enjoy!
