@@ -30,7 +30,7 @@ excluded-patches = """\
     """
 # included-patches = ""
 # patcher-args = "-e 'Theme' -OdarkThemeBackgroundColor='@android:color/system_neutral1_900'"
-patches-version = "dev"
+# patches-version = "dev"
 apkmirror-dlurl = "https://www.apkmirror.com/apk/google-inc/youtube"
 uptodown-dlurl = "https://youtube.en.uptodown.com/android"
 archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.youtube"
@@ -56,7 +56,7 @@ excluded-patches = """\
     'Custom branding' \
     """
 # included-patches = ""
-patches-version = "dev"
+# patches-version = "dev"
 apkmirror-dlurl = "https://www.apkmirror.com/apk/google-inc/youtube-music"
 uptodown-dlurl = "https://youtube-music.en.uptodown.com/android"
 archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.apps.youtube.music"
@@ -97,7 +97,7 @@ uptodown-dlurl = "https://youtube-music.en.uptodown.com/android"
 archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.apps.youtube.music"
 
 [GooglePhotos]
-enabled = true
+enabled = false
 app-name = "Google Photos"
 patches-source = "ReVanced/revanced-patches"
 cli-source = "ReVanced/revanced-cli"
@@ -134,7 +134,7 @@ version = "auto"
 # version = "2026.04.0"
 # excluded-patches = ""
 # included-patches = ""
-patches-version = "dev"
+# patches-version = "dev"
 apkmirror-dlurl = "https://www.apkmirror.com/apk/redditinc/reddit/"
 uptodown-dlurl = "https://reddit-official-app.en.uptodown.com/android"
 archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.reddit.frontpage"
