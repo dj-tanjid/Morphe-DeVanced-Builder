@@ -1,6 +1,6 @@
 {
-  "version": "v2026.04.0 (patches dev.3.mpp)",
-  "versionCode": 10,
-  "zipUrl": "https://github.com/dj-tanjid/Morphe-ReVancedX-Builder/releases/download/10/reddit-morphe-module-v2026.04.0-all.zip",
+  "version": "v2026.04.0 (patches 1.16.0.mpp)",
+  "versionCode": 13,
+  "zipUrl": "https://github.com/dj-tanjid/Morphe-ReVancedX-Builder/releases/download/13/reddit-morphe-module-v2026.04.0-all.zip",
   "changelog": "https://raw.githubusercontent.com/dj-tanjid/Morphe-ReVancedX-Builder/update/build.md"
 }
