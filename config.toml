@@ -1,6 +1,5 @@
 enable-module-update = true # set this to false if you do not want to receive updates for the module
-# parallel-jobs = 1
-# compression-level = 9
+parallel-jobs = 1
 
 # add 'enabled = false' for not patching a specific app or remove it from the config
 # see https://github.com/j-hc/revanced-magisk-module/blob/main/CONFIG.md for more detailed explanations
@@ -108,8 +107,8 @@ version = "7.63.0.872053646"
 patches-version = "dev"
 # patches-version = "v5.50.0-dev.7"
 # patches-version = "v6.0.0-dev.19"
-# build-mode = "apk"
-build-mode = "both"
+build-mode = "apk"
+# build-mode = "both"
 included-patches = """\
     'Enable DCIM folders backup control' \
     'Remove screenshot restriction' \
