@@ -92,8 +92,8 @@ apkmirror-dlurl = "https://www.apkmirror.com/apk/google-inc/youtube-music"
 uptodown-dlurl = "https://youtube-music.en.uptodown.com/android"
 archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.apps.youtube.music"
 
-[GooglePhotos]
-enabled = true
+[Google-Photos-ReVanced]
+enabled = false
 app-name = "Google Photos"
 patches-source = "ReVanced/revanced-patches"
 cli-source = "ReVanced/revanced-cli"
