@@ -1,3 +1,4 @@
+Reddit-Morphe: 2026.04.0  
 YT-Music-Morphe: 9.09.52  
 YouTube-Morphe: 21.10.493  
 
@@ -6,10 +7,6 @@ Use [zygisk-detach](https://github.com/j-hc/zygisk-detach) to detach YouTube and
 
 [revanced-magisk-module](https://github.com/j-hc/revanced-magisk-module)
   
-CLI: MorpheApp/morphe-cli-1.4.0-all.jar  
-Patches: MorpheApp/patches-1.18.0-dev.1.mpp  
-[Changelog](https://github.com/MorpheApp/morphe-patches/releases/tag/v1.18.0-dev.1)
-
-CLI: ReVanced/revanced-cli-5.0.1-all.jar  
-Patches: ReVanced/patches-6.0.0-dev.19.rvp  
-[Changelog](https://github.com/ReVanced/revanced-patches/releases/tag/v6.0.0-dev.19)  
+CLI: MorpheApp/morphe-cli-1.5.0-all.jar  
+Patches: MorpheApp/patches-1.18.0.mpp  
+[Changelog](https://github.com/MorpheApp/morphe-patches/releases/tag/v1.18.0)  
