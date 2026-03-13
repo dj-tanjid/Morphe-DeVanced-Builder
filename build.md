@@ -8,5 +8,5 @@ Import my [**Custom Settings**](../teejay/custom_settings-by_tanjid) into your a
 
 Patches and CLI Sources :  
 CLI: MorpheApp/morphe-cli-1.5.0-all.jar  
-Patches: MorpheApp/patches-1.19.0-dev.1.mpp  
-[Changelog](https://github.com/MorpheApp/morphe-patches/releases/tag/v1.19.0-dev.1)  
+Patches: MorpheApp/patches-1.19.0-dev.2.mpp  
+[Changelog](https://github.com/MorpheApp/morphe-patches/releases/tag/v1.19.0-dev.2)  
