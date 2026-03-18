@@ -108,7 +108,11 @@ dpi = "120-640dpi"
 # Experimental Support #
 # version = "2026.10.0"
 version = "2026.11.0"
-# excluded-patches = ""
+excluded-patches = """\
+    'Custom branding name for Reddit' \
+    'Custom branding icon for Reddit' \
+    'Custom branding' \
+    """
 # included-patches = ""
 patches-version = "dev"
 apkmirror-dlurl = "https://www.apkmirror.com/apk/redditinc/reddit/"
