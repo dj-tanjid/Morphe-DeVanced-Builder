@@ -1,6 +1,6 @@
 {
-  "version": "v21.10.496 (patches dev.2.mpp)",
-  "versionCode": 24,
-  "zipUrl": "https://github.com/dj-tanjid/Morphe-ReVancedX-Builder/releases/download/24/youtube-morphe-module-v21.10.496-arm64-v8a.zip",
+  "version": "v21.11.483 (patches dev.3.mpp)",
+  "versionCode": 25,
+  "zipUrl": "https://github.com/dj-tanjid/Morphe-ReVancedX-Builder/releases/download/25/youtube-morphe-module-v21.11.483-arm64-v8a.zip",
   "changelog": "https://raw.githubusercontent.com/dj-tanjid/Morphe-ReVancedX-Builder/update/build.md"
 }
