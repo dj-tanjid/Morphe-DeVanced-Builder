@@ -9,9 +9,9 @@ YouTube-Morphe: 21.11.483
 
 Patches and CLI Sources :  
 CLI: MorpheApp/morphe-cli-1.5.0-all.jar  
-Patches: MorpheApp/patches-1.20.0-dev.3.mpp  
-[Changelog](https://github.com/MorpheApp/morphe-patches/releases/tag/v1.20.0-dev.3)
+Patches: MorpheApp/patches-1.20.0.mpp  
+[Changelog](https://github.com/MorpheApp/morphe-patches/releases/tag/v1.20.0)
 
 CLI: ReVanced/revanced-cli-6.0.0-all.jar  
-Patches: ReVanced/patches-6.1.0.rvp  
-[Changelog](https://github.com/ReVanced/revanced-patches/releases/tag/v6.1.0)  
+Patches: ReVanced/patches-6.1.1-dev.1.rvp  
+[Changelog](https://github.com/ReVanced/revanced-patches/releases/tag/v6.1.1-dev.1)  
