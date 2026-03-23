@@ -1,3 +1,4 @@
+Google-Photos-ReVanced: 7.68.0.884121604  
 Reddit-Morphe: 2026.11.0  
 YT-Music-Morphe: 9.11.54  
 YouTube-Morphe: 21.12.524  
@@ -8,8 +9,9 @@ YouTube-Morphe: 21.12.524
 
 Patches and CLI Sources :  
 CLI: MorpheApp/morphe-cli-1.6.2-all.jar  
-Patches: MorpheApp/patches-1.21.1.mpp  
-[Changelog](https://github.com/MorpheApp/morphe-patches/releases/tag/v1.21.1)  
+Patches: MorpheApp/patches-1.22.0-dev.1.mpp  
+[Changelog](https://github.com/MorpheApp/morphe-patches/releases/tag/v1.22.0-dev.1)
 
-Skipped:  
-Patches: ReVanced/patches-6.1.1-dev.3.rvp    
+CLI: ReVanced/revanced-cli-6.0.0-all.jar  
+Patches: ReVanced/patches-6.1.1-dev.4.rvp  
+[Changelog](https://github.com/ReVanced/revanced-patches/releases/tag/v6.1.1-dev.4)  
