@@ -106,7 +106,8 @@ dpi = "120-640dpi"
 # version = "auto" # "2026.04.0"
 # Experimental Support #
 # version = "2026.10.0"
-version = "2026.11.0"
+# version = "2026.11.0"
+version = "2026.12.0"
 excluded-patches = """\
     'Custom branding name for Reddit' \
     'Custom branding icon for Reddit' \
