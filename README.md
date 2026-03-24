@@ -3,7 +3,7 @@
 # ReVanced x Morphe Builder
 
 [![GitHub License](https://img.shields.io/github/license/dj-tanjid/Morphe-ReVancedX-Builder?logo=gnu&label=License&link=https%3A%2F%2Fgithub.com%2Fdj-tanjid%2FMorphe-ReVancedX-Builder%2Fblob%2Fmain%2FLICENSE)](https://github.com/dj-tanjid/Morphe-ReVancedX-Builder/blob/main/LICENSE)
-[![Latest Release](https://img.shields.io/github/v/release/dj-tanjid/Morphe-ReVancedX-Builder?label=Release&logo=github)](../../releases/latest)
+[![Latest Release](https://img.shields.io/github/v/release/dj-tanjid/Morphe-ReVancedX-Builder?label=Latest%20Release&logo=github)](../../releases/latest)
 
 A fork of [ReVanced Builder](https://github.com/j-hc/revanced-magisk-module) by j-hc
 
