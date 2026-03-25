@@ -120,10 +120,10 @@ uptodown-dlurl = "https://reddit-official-app.en.uptodown.com/android"
 archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.reddit.frontpage"
 
 [Google-Photos-ReVanced]
-enabled = true
+enabled = false
 app-name = "Google Photos"
-# patches-source = "ReVanced/revanced-patches"
-# cli-source = "ReVanced/revanced-cli"
+patches-source = "ReVanced/revanced-patches"
+cli-source = "ReVanced/revanced-cli"
 arch = "arm64-v8a"
 version = "auto"
 # version = "7.65.0.874788995"
