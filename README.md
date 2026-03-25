@@ -26,8 +26,6 @@ This ReVanced/Morphe builder creates both APKs and [Magisk](https://github.com/t
 </ul>
 </details>
 
-#### **Get the [**Latest Release**](../../releases/latest)!**
-
 ## Installation
 ### Non-root users
 - Install [ReVanced GmsCore](https://github.com/ReVanced/GmsCore/releases/latest) or [Morphe MicroG-RE](https://github.com/MorpheApp/MicroG-RE/releases/latest).
