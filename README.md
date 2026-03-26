@@ -8,11 +8,11 @@
 [![GitHub License](https://img.shields.io/github/license/dj-tanjid/Morphe-ReVancedX-Builder?logo=github&label=License&link=https%3A%2F%2Fgithub.com%2Fdj-tanjid%2FMorphe-ReVancedX-Builder%2Fblob%2Fmain%2FLICENSE)](https://github.com/dj-tanjid/Morphe-ReVancedX-Builder/blob/main/LICENSE)
 [![Latest Release](https://img.shields.io/github/v/release/dj-tanjid/Morphe-ReVancedX-Builder?label=Latest%20Release&logo=android)](../../releases/latest)
 
-A fork of j-hc's [ReVanced Builder](https://github.com/j-hc/revanced-magisk-module) by *TanJid Creations*
+A fork of j-hc's [ReVanced Builder](https://github.com/j-hc/revanced-magisk-module) by **TanJid Creations**
 
 This ReVanced/Morphe builder creates both APKs and [Magisk](https://github.com/topjohnwu/Magisk)/[KernelSU](https://github.com/tiann/KernelSU) modules for [ReVanced](https://github.com/ReVanced), [ReVanced Extended by Anddea](https://github.com/anddea/revanced-patches) and [Morphe](https://github.com/MorpheApp) versions of **YouTube**, **YouTube Music**, **Google Photos** & **Reddit**.
 
-<details><summary><big>Features</big></summary>
+<details><summary><big><h2>Features</h2></big></summary>
 <ul>
  <li> Supports all present and future ReVanced & Morphe apps (including projects implementing the same API)</li>
  <li> Can build root Modules and non-root APKs</li>
