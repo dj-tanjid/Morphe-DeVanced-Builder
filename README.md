@@ -1,12 +1,14 @@
 <p align="center">
  <p align="center">⚠️⚠️⚠️</p>
- <p align="center"><b>Avoid downloading APKs or modules from untrusted websites, as they may be harmful and impersonate official ReVanced/ReVanced Extended/Morphe projects. Always build from official sources or trusted open-source builders like this one.</b></p>
+ <p align="center"><b>Avoid downloading APKs or modules from untrusted websites, as they may be harmful and impersonate official Morphe/ReVanced/ReVanced Extended projects. Always build from official sources or trusted open-source builders like this one.</b></p>
 </p>
 
-# ReVanced x Morphe Builder
-
-[![GitHub License](https://img.shields.io/github/license/dj-tanjid/Morphe-ReVancedX-Builder?logo=github&label=License&link=https%3A%2F%2Fgithub.com%2Fdj-tanjid%2FMorphe-ReVancedX-Builder%2Fblob%2Fmain%2FLICENSE)](https://github.com/dj-tanjid/Morphe-ReVancedX-Builder/blob/main/LICENSE)
+<p align="center">
+ <h1 align="center">Morphe x ReVanced Builder</h1>
+ <p align="center">[![GitHub License](https://img.shields.io/github/license/dj-tanjid/Morphe-ReVancedX-Builder?logo=github&label=License&link=https%3A%2F%2Fgithub.com%2Fdj-tanjid%2FMorphe-ReVancedX-Builder%2Fblob%2Fmain%2FLICENSE)](https://github.com/dj-tanjid/Morphe-ReVancedX-Builder/blob/main/LICENSE)
 [![Latest Release](https://img.shields.io/github/v/release/dj-tanjid/Morphe-ReVancedX-Builder?label=Latest%20Release&logo=android)](../../releases/latest)
+  </p>
+</p>
 
 A fork of j-hc's [ReVanced Builder](https://github.com/j-hc/revanced-magisk-module) by *TanJid Creations*
 
