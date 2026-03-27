@@ -1,6 +1,6 @@
 <p align="center">
  <p align="center">⚠️⚠️⚠️</p>
- <p align="center"><b>Avoid downloading APKs or modules from untrusted websites, as they may be harmful and impersonate official Morphe/ReVanced/ReVanced Extended projects. Always build from official sources or trusted open-source builders like this one.</b></p>
+ <p align="center"><b>Avoid downloading APKs or modules from untrusted websites, as they may be harmful and impersonate official Morphe/ReVanced/ReVanced Extended projects. Always download builds from official sources or trusted open-source builders like this one.</b></p>
 </p>
 
 <h1>Morphe x ReVanced Builder</h1>
