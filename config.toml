@@ -47,6 +47,7 @@ arch = "arm64-v8a"
 # version = "9.10.52"
 # version = "9.11.54"
 version = "9.12.51"
+# version = "9.13.50"
 excluded-patches = """\
     'Custom branding name for YouTube Music' \
     'Custom branding icon for YouTube Music' \
