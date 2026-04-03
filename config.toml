@@ -15,11 +15,12 @@ arch = "arm64-v8a"
 # Stable Support #
 # version = "auto" # "20.45.36"
 # Experimental Support #
-# version = "21.09.270"
 # version = "21.10.496"
 # version = "21.11.486" # Working Shorts BG Playback
 version = "21.12.524"
 # version = "21.13.163"
+# version = "21.14.482"
+
 excluded-patches = """\
     'Custom branding name for YouTube' \
     'Custom branding icon for YouTube' \
