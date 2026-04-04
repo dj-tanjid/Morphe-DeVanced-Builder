@@ -19,7 +19,7 @@ arch = "arm64-v8a"
 # version = "21.11.486" # Working Shorts BG Playback
 version = "21.12.524"
 # version = "21.13.163"
-# version = "21.14.482"
+# version = "21.14.484"
 
 excluded-patches = """\
     'Custom branding name for YouTube' \
@@ -110,10 +110,10 @@ dpi = "120-640dpi"
 # Stable Support #
 # version = "auto" # "2026.04.0"
 # Experimental Support #
-# version = "2026.10.0"
 # version = "2026.11.0"
 # version = "2026.12.0"
-version = "2026.13.0"
+# version = "2026.13.0"
+version = "2026.14.0"
 excluded-patches = """\
     'Custom branding name for Reddit' \
     'Custom branding icon for Reddit' \
