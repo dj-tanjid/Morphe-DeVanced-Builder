@@ -17,9 +17,9 @@ arch = "arm64-v8a"
 # Experimental Support #
 # version = "21.10.496"
 # version = "21.11.486" # Working Shorts BG Playback
-version = "21.12.524"
+# version = "21.12.524"
 # version = "21.13.163"
-# version = "21.14.484"
+version = "21.14.484"
 
 excluded-patches = """\
     'Custom branding name for YouTube' \
@@ -47,8 +47,8 @@ arch = "arm64-v8a"
 # version = "9.09.52"
 # version = "9.10.52"
 # version = "9.11.54"
-version = "9.12.51"
-# version = "9.13.50"
+# version = "9.12.51"
+version = "9.13.50"
 excluded-patches = """\
     'Custom branding name for YouTube Music' \
     'Custom branding icon for YouTube Music' \
