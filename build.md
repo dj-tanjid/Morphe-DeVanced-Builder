@@ -8,5 +8,5 @@ YouTube-Morphe: 21.14.484
 
 Patches and CLI Sources :  
 CLI: MorpheApp/morphe-cli-1.6.3-all.jar  
-Patches: MorpheApp/patches-1.23.0-dev.6.mpp  
-[Changelog](https://github.com/MorpheApp/morphe-patches/releases/tag/v1.23.0-dev.6)  
+Patches: MorpheApp/patches-1.23.0-dev.7.mpp  
+[Changelog](https://github.com/MorpheApp/morphe-patches/releases/tag/v1.23.0-dev.7)  
