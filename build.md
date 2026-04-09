@@ -1,6 +1,6 @@
 Reddit-Morphe: 2026.14.0  
 YT-Music-Morphe: 9.13.51  
-YouTube-Morphe: 21.13.164  
+YouTube-Morphe: 21.14.484  
 
 - Install [ReVanced GmsCore](https://github.com/ReVanced/GmsCore/releases/latest) or [Morphe MicroG-RE](https://github.com/MorpheApp/MicroG-RE/releases/latest) for non-root YouTube, YT Music and Google Photos APKs.  
 - (Optional) Use [zygisk-detach](https://github.com/j-hc/zygisk-detach) to detach YouTube and YT Music modules from Google Play Store.  
@@ -8,5 +8,5 @@ YouTube-Morphe: 21.13.164
 
 Patches and CLI Sources :  
 CLI: MorpheApp/morphe-cli-1.6.3-all.jar  
-Patches: MorpheApp/patches-1.23.0-dev.9.mpp  
-[Changelog](https://github.com/MorpheApp/morphe-patches/releases/tag/v1.23.0-dev.9)  
+Patches: MorpheApp/patches-1.23.0.mpp  
+[Changelog](https://github.com/MorpheApp/morphe-patches/releases/tag/v1.23.0)  
