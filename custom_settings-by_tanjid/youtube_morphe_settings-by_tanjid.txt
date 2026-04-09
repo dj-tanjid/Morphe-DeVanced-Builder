@@ -42,7 +42,6 @@
 "player_overlay_opacity": 80,
 "remove_viewer_discretion_dialog": true,
 "seekbar_custom_color": true,
-"settings_search_entries": "exit\nbackground\nseekbar",
 "shorts_quality_default_mobile": 1080,
 "shorts_quality_default_wifi": 2160,
 "show_toolbar_settings_button_index": 4,
