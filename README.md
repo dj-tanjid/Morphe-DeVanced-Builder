@@ -25,6 +25,7 @@ This ReVanced/Morphe builder creates both APKs and [Magisk](https://github.com/t
      <li> do not break safetynet or trigger root detections</li>
      <li> handle installation of the correct version of the stock app and all that</li>
      <li> support Magisk and KernelSU</li>
+     <li> have custom banner</li>
     </ul>
 </ul>
 </details>
