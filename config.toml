@@ -16,10 +16,10 @@ arch = "arm64-v8a"
 # version = "auto" # "20.47.62"
 # Experimental Support #
 # version = "21.11.486" # Working Shorts BG Playback
-# version = "21.12.524"
 # version = "21.13.164"
 # version = "21.14.485"
-version = "21.15.288"
+# version = "21.15.288"
+version = "21.16.240"
 excluded-patches = """\
     'Custom branding name for YouTube' \
     'Custom branding icon for YouTube' \
@@ -106,7 +106,7 @@ build-mode = "both"
 # arch = "arm64-v8a"
 dpi = "120-640dpi"
 # Stable Support #
-# version = "auto" # "2026.04.0"
+# version = "auto" # "2026.10.0"
 # Experimental Support #
 # version = "2026.12.0"
 # version = "2026.13.0"
