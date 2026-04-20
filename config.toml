@@ -96,7 +96,7 @@ uptodown-dlurl = "https://youtube-music.en.uptodown.com/android"
 archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.apps.youtube.music"
 
 [Reddit-Morphe]
-enabled = true
+enabled = false
 app-name = "Reddit"
 rv-brand = "Morphe"
 patches-source = "MorpheApp/morphe-patches"
@@ -109,9 +109,9 @@ dpi = "120-640dpi"
 # version = "auto" # "2026.10.0"
 # Experimental Support #
 # version = "2026.13.0"
-version = "2026.14.0"
+# version = "2026.14.0"
 # version = "2026.15.1"
-# version = "2026.16.0"
+version = "2026.16.0"
 excluded-patches = """\
     'Custom branding name for Reddit' \
     'Custom branding icon for Reddit' \
