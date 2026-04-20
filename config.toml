@@ -27,7 +27,7 @@ excluded-patches = """\
     """
 # included-patches = ""
 # patcher-args = "-e 'Theme' -OdarkThemeBackgroundColor='@android:color/system_neutral1_900'"
-patches-version = "dev"
+# patches-version = "dev"
 apkmirror-dlurl = "https://www.apkmirror.com/apk/google-inc/youtube"
 uptodown-dlurl = "https://youtube.en.uptodown.com/android"
 archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.youtube"
@@ -53,7 +53,7 @@ excluded-patches = """\
     'Custom branding' \
     """
 # included-patches = ""
-patches-version = "dev"
+# patches-version = "dev"
 apkmirror-dlurl = "https://www.apkmirror.com/apk/google-inc/youtube-music"
 uptodown-dlurl = "https://youtube-music.en.uptodown.com/android"
 archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.apps.youtube.music"
@@ -96,7 +96,7 @@ uptodown-dlurl = "https://youtube-music.en.uptodown.com/android"
 archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.apps.youtube.music"
 
 [Reddit-Morphe]
-enabled = false
+enabled = true
 app-name = "Reddit"
 rv-brand = "Morphe"
 patches-source = "MorpheApp/morphe-patches"
@@ -112,13 +112,14 @@ dpi = "120-640dpi"
 # version = "2026.13.0"
 # version = "2026.14.0"
 version = "2026.15.1"
+version = "2026.16.0"
 excluded-patches = """\
     'Custom branding name for Reddit' \
     'Custom branding icon for Reddit' \
     'Custom branding' \
     """
 # included-patches = ""
-patches-version = "dev"
+# patches-version = "dev"
 apkmirror-dlurl = "https://www.apkmirror.com/apk/redditinc/reddit/"
 uptodown-dlurl = "https://reddit-official-app.en.uptodown.com/android"
 archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.reddit.frontpage"
