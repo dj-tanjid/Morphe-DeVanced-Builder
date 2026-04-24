@@ -30,7 +30,7 @@ This ReVanced/Morphe builder creates both APKs and [Magisk](https://github.com/t
 </ul>
 </details>
 
-**Note: If you want YouTube Shorts background playback, download the latest YouTube Morphe v21.11.486 from the [releases](../../releases) section.** This version is regularly updated and patched whenever a stable Morphe patch becomes available.
+**Note: If you want YouTube Shorts background playback, download the latest patched YouTube Morphe v21.11.486 from the [releases](../../releases) section.** *This version is regularly updated and patched whenever a stable Morphe patch becomes available.*
 
 ## Installation
 ### Non-root users
