@@ -73,7 +73,7 @@ You can consider using [rvmm-zygisk-mount](https://github.com/j-hc/rvmm-zygisk-m
 ## Credits
 - [j-hc](https://github.com/j-hc) for creating this amazing builder.
 - [Peter Noël Muller](https://github.com/peternmuller) for his work and inspirations.
-- And of course, the [ReVanced](https://github.com/ReVanced) team, [anddea](https://github.com/anddea), and the [Morphe](https://github.com/MorpheApp) team for their work on the ReVanced/Morphe apps!
+- And of course, the [Morphe](https://github.com/MorpheApp) team, [anddea](https://github.com/anddea) and the [ReVanced](https://github.com/ReVanced) team for their work on the ReVanced/Morphe apps!
 
 ## License
     Copyright (C) 2024-2026 Tanjidul Hossain
