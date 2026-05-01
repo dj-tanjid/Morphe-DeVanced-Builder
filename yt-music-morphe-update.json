@@ -1,6 +1,6 @@
 {
-  "version": "v9.16.51 (patches dev.11.mpp)",
-  "versionCode": 60,
-  "zipUrl": "https://github.com/dj-tanjid/Morphe-ReVancedX-Builder/releases/download/60/yt-music-morphe-module-v9.16.51-arm64-v8a.zip",
+  "version": "v9.16.51 (patches dev.12.mpp)",
+  "versionCode": 61,
+  "zipUrl": "https://github.com/dj-tanjid/Morphe-ReVancedX-Builder/releases/download/61/yt-music-morphe-module-v9.16.51-arm64-v8a.zip",
   "changelog": "https://raw.githubusercontent.com/dj-tanjid/Morphe-ReVancedX-Builder/update/build.md"
 }
