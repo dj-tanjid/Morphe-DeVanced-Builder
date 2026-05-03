@@ -114,6 +114,7 @@ dpi = "120-640dpi"
 # version = "2026.15.1"
 # version = "2026.16.0"
 version = "2026.17.0"
+# version = "2026.18.0"
 excluded-patches = """\
     'Custom branding name for Reddit' \
     'Custom branding icon for Reddit' \
