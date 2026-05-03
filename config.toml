@@ -148,7 +148,7 @@ apkmirror-dlurl = "https://www.apkmirror.com/apk/google-inc/photos"
 uptodown-dlurl = "https://google-photos.en.uptodown.com/android"
 archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.apps.photos"
 
-[Twitter]
+[Twitter-Piko]
 enabled = true
 patches-source = "crimera/piko"
 cli-source = "MorpheApp/morphe-cli"
