@@ -10,7 +10,7 @@
 
 A fork of j-hc's [ReVanced Builder](https://github.com/j-hc/revanced-magisk-module) by **TanJid Creations**
 
-This ReVanced/Morphe builder creates both APKs and [Magisk](https://github.com/topjohnwu/Magisk)/[KernelSU](https://github.com/tiann/KernelSU) modules for [ReVanced](https://github.com/ReVanced), [ReVanced Extended by Anddea](https://github.com/anddea/revanced-patches) and [Morphe](https://github.com/MorpheApp) versions of **YouTube**, **YouTube Music**, **Google Photos**, **Reddit** & **Twitter**.
+This ReVanced/Morphe builder creates both APKs and [Magisk](https://github.com/topjohnwu/Magisk)/[KernelSU](https://github.com/tiann/KernelSU) modules for [Morphe](https://github.com/MorpheApp), [ReVanced](https://github.com/ReVanced), [ReVanced Extended by Anddea](https://github.com/anddea/revanced-patches) and [Piko](https://github.com/crimera/piko) versions of **YouTube**, **YouTube Music**, **Google Photos**, **Reddit** & **Twitter**.
 
 <details><summary><big><b>&nbsp;Features</b></big></summary>
 <ul>
