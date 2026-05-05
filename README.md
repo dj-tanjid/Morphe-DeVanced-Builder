@@ -10,7 +10,7 @@
 
 A fork of j-hc's [ReVanced Builder](https://github.com/j-hc/revanced-magisk-module) by **TanJid Creations**
 
-This ReVanced/Morphe builder creates both APKs and [Magisk](https://github.com/topjohnwu/Magisk)/[KernelSU](https://github.com/tiann/KernelSU) modules for [Morphe](https://github.com/MorpheApp), [ReVanced](https://github.com/ReVanced), [ReVanced Extended by Anddea](https://github.com/anddea/revanced-patches) and [Piko](https://github.com/crimera/piko) versions of **YouTube**, **YouTube Music**, **Google Photos**, **Reddit** & **Twitter**.
+This ReVanced/Morphe builder creates both APKs and [Magisk](https://github.com/topjohnwu/Magisk)/[KernelSU](https://github.com/tiann/KernelSU) modules for [Morphe](https://github.com/MorpheApp), [De-ReVanced](https://github.com/RookieEnough/De-ReVanced), [ReVanced Extended by Anddea](https://github.com/anddea/revanced-patches) and [Piko](https://github.com/crimera/piko) versions of **YouTube**, **YouTube Music**, **Google Photos**, **Reddit** & **Twitter**.
 
 <details><summary><big><b>&nbsp;Features</b></big></summary>
 <ul>
@@ -73,7 +73,7 @@ You can consider using [rvmm-zygisk-mount](https://github.com/j-hc/rvmm-zygisk-m
 ## Credits
 - [j-hc](https://github.com/j-hc) for creating this amazing builder.
 - [Peter Noël Muller](https://github.com/peternmuller) for his work and inspirations.
-- And of course, [Morphe](https://github.com/MorpheApp) team, [anddea](https://github.com/anddea), [ReVanced](https://github.com/ReVanced) team and [crimera](https://github.com/crimera) for their work on the ReVanced/Morphe apps!
+- And of course, [Morphe](https://github.com/MorpheApp) team, [anddea](https://github.com/anddea), [ReVanced](https://github.com/ReVanced) team, [crimera](https://github.com/crimera) and [RookieEnough](https://github.com/RookieEnough/) for their work on the ReVanced/Morphe apps!
 
 ## License
     Copyright (C) 2024-2026 Tanjidul Hossain
