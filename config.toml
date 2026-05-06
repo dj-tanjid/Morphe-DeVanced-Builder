@@ -160,7 +160,7 @@ build-mode = "both"
 # version = "11.81.0-release.0" # PairIP Free
 version = "11.85.0-release.0"
 # version = "11.86.0-release.0"
-include-stock = "split"
+# include-stock = "split"
 patches-version = "dev"
 included-patches = """\
     'Bring back twitter' \
