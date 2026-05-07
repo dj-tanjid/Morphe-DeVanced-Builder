@@ -19,7 +19,7 @@ arch = "arm64-v8a"
 # version = "21.11.486" # Working Shorts BG Playback
 # version = "21.16.256"
 # version = "21.17.482"
-version = "21.18.164"
+version = "21.18.168"
 excluded-patches = """\
     'Custom branding name for YouTube' \
     'Custom branding icon for YouTube' \
@@ -149,7 +149,7 @@ uptodown-dlurl = "https://google-photos.en.uptodown.com/android"
 archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.apps.photos"
 
 [Twitter-Piko]
-enabled = true
+enabled = false
 app-name = "Twitter"
 patches-source = "crimera/piko"
 cli-source = "MorpheApp/morphe-cli"
@@ -159,7 +159,7 @@ build-mode = "both"
 # version = "auto"
 version = "11.81.0-release.0" # PairIP Free
 # version = "11.85.0-release.0"
-# version = "11.86.0-release.0"
+# version = "11.88.0-release.0"
 include-stock = "split"
 patches-version = "dev"
 included-patches = """\
