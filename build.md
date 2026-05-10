@@ -1,4 +1,5 @@
-Twitter-Piko: 11.88.0-release.0  
+Reddit-Morphe: 2026.18.0  
+YT-Music-Morphe: 9.18.50  
 YouTube-Morphe: 21.18.168  
 
 - Install [ReVanced GmsCore](https://github.com/ReVanced/GmsCore/releases/latest) or [Morphe MicroG-RE](https://github.com/MorpheApp/MicroG-RE/releases/latest) for non-root YouTube, YT Music and Google Photos APKs.  
@@ -7,8 +8,5 @@ YouTube-Morphe: 21.18.168
 
 Patches and CLI Sources :  
 CLI: MorpheApp/morphe-cli-1.8.0-all.jar  
-Patches: crimera/patches-3.3.0-dev.6.mpp  
-[Changelog](https://github.com/crimera/piko/releases/tag/v3.3.0-dev.6)
-
-Patches: MorpheApp/patches-1.27.0-dev.2.mpp  
-[Changelog](https://github.com/MorpheApp/morphe-patches/releases/tag/v1.27.0-dev.2)  
+Patches: MorpheApp/patches-1.27.0-dev.3.mpp  
+[Changelog](https://github.com/MorpheApp/morphe-patches/releases/tag/v1.27.0-dev.3)  
