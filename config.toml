@@ -27,7 +27,7 @@ excluded-patches = """\
     """
 # included-patches = ""
 # patcher-args = "-e 'Theme' -OdarkThemeBackgroundColor='@android:color/system_neutral1_900'"
-patches-version = "dev"
+# patches-version = "dev"
 apkmirror-dlurl = "https://www.apkmirror.com/apk/google-inc/youtube"
 uptodown-dlurl = "https://youtube.en.uptodown.com/android"
 archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.youtube"
@@ -54,7 +54,7 @@ excluded-patches = """\
     'Custom branding' \
     """
 # included-patches = ""
-patches-version = "dev"
+# patches-version = "dev"
 apkmirror-dlurl = "https://www.apkmirror.com/apk/google-inc/youtube-music"
 uptodown-dlurl = "https://youtube-music.en.uptodown.com/android"
 archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.apps.youtube.music"
@@ -109,22 +109,22 @@ dpi = "120-640dpi"
 # Stable Support #
 # version = "auto" # "2026.10.0"
 # Experimental Support #
-# version = "2026.16.0"
 # version = "2026.17.0"
-version = "2026.18.0"
+# version = "2026.18.0"
+version = "2026.19.0"
 excluded-patches = """\
     'Custom branding name for Reddit' \
     'Custom branding icon for Reddit' \
     'Custom branding' \
     """
 # included-patches = ""
-patches-version = "dev"
+# patches-version = "dev"
 apkmirror-dlurl = "https://www.apkmirror.com/apk/redditinc/reddit/"
 uptodown-dlurl = "https://reddit-official-app.en.uptodown.com/android"
 archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.reddit.frontpage"
 
 [Google-Photos-ReVanced]
-enabled = false
+enabled = true
 app-name = "Google Photos"
 patches-source = "RookieEnough/De-ReVanced"
 # patches-source = "ReVanced/revanced-patches"
@@ -139,6 +139,7 @@ version = "7.75.0.911466973"
 # patches-version = "dev"
 # build-mode = "apk"
 build-mode = "both"
+# patches-version = "dev"
 included-patches = """\
     'Enable DCIM folders backup control' \
     'Remove screenshot restriction' \
@@ -150,7 +151,7 @@ uptodown-dlurl = "https://google-photos.en.uptodown.com/android"
 archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.apps.photos"
 
 [Twitter-Piko]
-enabled = false
+enabled = true
 app-name = "Twitter"
 patches-source = "crimera/piko"
 cli-source = "MorpheApp/morphe-cli"
@@ -158,11 +159,11 @@ rv-brand = "Piko"
 # build-mode = "apk"
 build-mode = "both"
 # version = "auto"
-# version = "11.81.0-release.0" # PairIP Free
+version = "11.81.0-release.0" # PairIP Free
 # version = "11.85.0-release.0"
-version = "11.88.0-release.0"
+# version = "11.88.0-release.0"
 include-stock = "split"
-patches-version = "dev"
+# patches-version = "dev"
 included-patches = """\
     'Bring back twitter' \
     'Dynamic color' \
