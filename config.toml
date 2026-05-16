@@ -165,7 +165,7 @@ build-mode = "both"
 # version = "11.85.0-release.0"
 version = "11.91.0-release.0"
 include-stock = "split"
-# patches-version = "dev"
+patches-version = "dev"
 included-patches = """\
     'Bring back twitter' \
     'Dynamic color' \
