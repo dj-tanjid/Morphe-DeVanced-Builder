@@ -1,6 +1,6 @@
 {
-  "version": "v11.81.0-release.0 (patches 3.4.0.mpp)",
-  "versionCode": 82,
-  "zipUrl": "https://github.com/dj-tanjid/Morphe-ReVancedX-Builder/releases/download/82/twitter-piko-module-v11.81.0-release.0-all.zip",
+  "version": "v11.81.0-release.0 (patches dev.1.mpp)",
+  "versionCode": 86,
+  "zipUrl": "https://github.com/dj-tanjid/Morphe-ReVancedX-Builder/releases/download/86/twitter-piko-module-v11.81.0-release.0-all.zip",
   "changelog": "https://raw.githubusercontent.com/dj-tanjid/Morphe-ReVancedX-Builder/update/build.md"
 }
