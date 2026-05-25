@@ -109,7 +109,6 @@ dpi = "120-640dpi"
 # Stable Support #
 # version = "auto" # "2026.14.0"
 # Experimental Support #
-# version = "2026.17.0"
 # version = "2026.18.0"
 # version = "2026.19.0"
 # version = "2026.20.0"
@@ -153,7 +152,7 @@ uptodown-dlurl = "https://google-photos.en.uptodown.com/android"
 archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.apps.photos"
 
 [Twitter-Piko]
-enabled = true
+enabled = false
 app-name = "Twitter"
 patches-source = "crimera/piko"
 cli-source = "MorpheApp/morphe-cli"
