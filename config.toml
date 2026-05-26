@@ -14,7 +14,7 @@ rv-brand = "Morphe"
 build-mode = "both"
 arch = "arm64-v8a"
 # Stable Support #
-# version = "auto" # "20.47.62"
+# version = "auto" # "20.51.39"
 # Experimental Support #
 # version = "21.11.486" # Working Shorts BG Playback
 # version = "21.17.482"
