@@ -10,22 +10,21 @@ app-name = "YouTube"
 patches-source = "MorpheApp/morphe-patches"
 cli-source = "MorpheApp/morphe-cli"
 rv-brand = "Morphe"
-build-mode = "both" # Options are 'apk', 'module', or 'both'
-arch = "arm64-v8a" # Options are 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64', or 'universal'
+build-mode = "both" # Options 'apk', 'module', or 'both'
+arch = "arm64-v8a" # Options 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64', or 'universal'
 # Stable Support #
 # version = "auto" # "20.51.39"
 # Experimental Support #
 # version = "21.21.91"
 version = "21.22.165"
-include-stock = "merged" # Options are 'split', 'merged', or 'disable'
+include-stock = "merged" # Options 'split', 'merged', or 'disable'
 excluded-patches = """\
     'Custom branding name for YouTube' \
     'Custom branding icon for YouTube' \
     'Custom branding' \
     """
 # included-patches = ""
-# patcher-args = "-e 'Theme' -OdarkThemeBackgroundColor='@android:color/system_neutral1_900'"
-patches-version = "dev" # Options are 'latest', 'dev', or A specific version tag
+patches-version = "dev" # Options 'latest', 'dev', or A specific version tag
 apkmirror-dlurl = "https://www.apkmirror.com/apk/google-inc/youtube"
 uptodown-dlurl = "https://youtube.en.uptodown.com/android"
 archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.youtube"
@@ -36,21 +35,21 @@ app-name = "YT Music"
 patches-source = "MorpheApp/morphe-patches"
 cli-source = "MorpheApp/morphe-cli"
 rv-brand = "Morphe"
-build-mode = "both" # Options are 'apk', 'module', or 'both'
-arch = "arm64-v8a" # Options are 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64', or 'universal'
+build-mode = "both" # Options 'apk', 'module', or 'both'
+arch = "arm64-v8a" # Options 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64', or 'universal'
 # Stable Support #
 # version = "auto" # "8.51.51"
 # Experimental Support #
 # version = "9.21.51"
 version = "9.22.53"
-include-stock = "merged" # Options are 'split', 'merged', or 'disable'
+include-stock = "merged" # Options 'split', 'merged', or 'disable'
 excluded-patches = """\
     'Custom branding name for YouTube Music' \
     'Custom branding icon for YouTube Music' \
     'Custom branding' \
     """
 # included-patches = ""
-patches-version = "dev" # Options are 'latest', 'dev', or A specific version tag
+patches-version = "dev" # Options 'latest', 'dev', or A specific version tag
 apkmirror-dlurl = "https://www.apkmirror.com/apk/google-inc/youtube-music"
 uptodown-dlurl = "https://youtube-music.en.uptodown.com/android"
 archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.apps.youtube.music"
@@ -65,7 +64,7 @@ cli-source = "MorpheApp/morphe-cli"
 rv-brand = "ReVanced Extended Anddea"
 version = "20.21.37"
 patches-version = "dev"
-build-mode = "both" # Options are 'apk', 'module', or 'both'
+build-mode = "both" # Options 'apk', 'module', or 'both'
 excluded-patches = " 'Enable debug logging' "
 # included-patches = ""
 # include-stock = true
@@ -83,9 +82,9 @@ cli-source = "MorpheApp/morphe-cli"
 # cli-source = "inotia00/revanced-cli"
 rv-brand = "ReVanced Extended Anddea"
 version = "auto"
-arch = "arm64-v8a" # Options are 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64', or 'universal'
-patches-version = "dev" # Options are 'latest', 'dev', or A specific version tag
-build-mode = "both" # Options are 'apk', 'module', or 'both'
+arch = "arm64-v8a" # Options 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64', or 'universal'
+patches-version = "dev" # Options 'latest', 'dev', or A specific version tag
+build-mode = "both" # Options 'apk', 'module', or 'both'
 excluded-patches = " 'Enable debug logging' "
 included-patches = " 'Hide player overlay filter' 'Hide overlay filter' 'Disable music video in album' "
 apkmirror-dlurl = "https://www.apkmirror.com/apk/google-inc/youtube-music"
@@ -98,21 +97,21 @@ app-name = "Reddit"
 patches-source = "MorpheApp/morphe-patches"
 cli-source = "MorpheApp/morphe-cli"
 rv-brand = "Morphe"
-build-mode = "both" # Options are 'apk', 'module', or 'both'
+build-mode = "both" # Options 'apk', 'module', or 'both'
 dpi = "120-640dpi"
 # Stable Support #
 # version = "auto" # "2026.14.0"
 # Experimental Support #
 # version = "2026.21.0"
 version = "2026.22.0"
-include-stock = "merged" # Options are 'split', 'merged', or 'disable'
+include-stock = "merged" # Options 'split', 'merged', or 'disable'
 excluded-patches = """\
     'Custom branding name for Reddit' \
     'Custom branding icon for Reddit' \
     'Custom branding' \
     """
 # included-patches = ""
-patches-version = "dev" # Options are 'latest', 'dev', or A specific version tag
+patches-version = "dev" # Options 'latest', 'dev', or A specific version tag
 apkmirror-dlurl = "https://www.apkmirror.com/apk/redditinc/reddit/"
 uptodown-dlurl = "https://reddit-official-app.en.uptodown.com/android"
 archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.reddit.frontpage"
@@ -125,14 +124,13 @@ patches-source = "RookieEnough/De-Vanced"
 cli-source = "MorpheApp/morphe-cli"
 # cli-source = "ReVanced/revanced-cli"
 rv-brand = "De-Vanced"
-arch = "arm64-v8a" # Options are 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64', or 'universal'
+arch = "arm64-v8a" # Options 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64', or 'universal'
 # version = "auto"
-# version = "7.77.0.916869048"
 # version = "7.78.0.920664585"
 version = "7.79.0.924379438"
-build-mode = "both" # Options are 'apk', 'module', or 'both'
-include-stock = "merged" # Options are 'split', 'merged', or 'disable'
-# patches-version = "dev" # Options are 'latest', 'dev', or A specific version tag
+build-mode = "both" # Options 'apk', 'module', or 'both'
+include-stock = "merged" # Options 'split', 'merged', or 'disable'
+# patches-version = "dev" # Options 'latest', 'dev', or A specific version tag
 included-patches = """\
     'Enable DCIM folders backup control' \
     'Remove screenshot restriction' \
@@ -149,12 +147,12 @@ app-name = "Twitter"
 patches-source = "crimera/piko"
 cli-source = "MorpheApp/morphe-cli"
 rv-brand = "Piko"
-build-mode = "apk" # Options are 'apk', 'module', or 'both'
+build-mode = "apk" # Options 'apk', 'module', or 'both'
 # version = "auto"
 version = "11.81.0-release.0" # PairIP Free
 # version = "11.93.0-release.0"
-include-stock = "merged" # Options are 'split', 'merged', or 'disable'
-patches-version = "dev" # Options are 'latest', 'dev', or A specific version tag
+include-stock = "merged" # Options 'split', 'merged', or 'disable'
+patches-version = "dev" # Options 'latest', 'dev', or A specific version tag
 included-patches = """\
     'Bring back twitter' \
     'Dynamic color' \
