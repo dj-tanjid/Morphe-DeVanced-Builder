@@ -7,8 +7,8 @@ parallel-jobs = 1
 [YouTube-Morphe]
 enabled = true
 app-name = "YouTube"
-patches-source = "github:MorpheApp/morphe-patches"
-cli-source = "github:MorpheApp/morphe-cli"
+patches-source = "MorpheApp/morphe-patches"
+cli-source = "MorpheApp/morphe-cli"
 rv-brand = "Morphe"
 build-mode = "both" # Options 'apk', 'module', or 'both'
 arch = "arm64-v8a" # Options 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64', or 'universal'
@@ -33,8 +33,8 @@ archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.y
 [YT-Music-Morphe]
 enabled = true
 app-name = "YT Music"
-patches-source = "github:MorpheApp/morphe-patches"
-cli-source = "github:MorpheApp/morphe-cli"
+patches-source = "MorpheApp/morphe-patches"
+cli-source = "MorpheApp/morphe-cli"
 rv-brand = "Morphe"
 build-mode = "both" # Options 'apk', 'module', or 'both'
 arch = "arm64-v8a" # Options 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64', or 'universal'
@@ -59,10 +59,10 @@ archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.a
 [YouTube-Anddea]
 enabled = false
 app-name = "YouTube"
-patches-source = "github:anddea/revanced-patches"
-# patches-source = "github:inotia00/revanced-patches"
+patches-source = "anddea/revanced-patches"
+# patches-source = "inotia00/revanced-patches"
 cli-source = "github:MorpheApp/morphe-cli"
-# cli-source = "github:inotia00/revanced-cli"
+# cli-source = "inotia00/revanced-cli"
 rv-brand = "Anddea Extended"
 version = "20.21.37"
 patches-version = "dev"
@@ -78,10 +78,10 @@ archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.y
 [YT-Music-Anddea]
 enabled = false
 app-name = "YT Music"
-patches-source = "github:anddea/revanced-patches"
-# patches-source = "github:inotia00/revanced-patches"
-cli-source = "github:MorpheApp/morphe-cli"
-# cli-source = "github:inotia00/revanced-cli"
+patches-source = "anddea/revanced-patches"
+# patches-source = "inotia00/revanced-patches"
+cli-source = "MorpheApp/morphe-cli"
+# cli-source = "inotia00/revanced-cli"
 rv-brand = "Anddea Extended"
 version = "auto"
 arch = "arm64-v8a" # Options 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64', or 'universal'
@@ -96,8 +96,8 @@ archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.a
 [Reddit-Morphe]
 enabled = true
 app-name = "Reddit"
-patches-source = "github:MorpheApp/morphe-patches"
-cli-source = "github:MorpheApp/morphe-cli"
+patches-source = "MorpheApp/morphe-patches"
+cli-source = "MorpheApp/morphe-cli"
 rv-brand = "Morphe"
 build-mode = "both" # Options 'apk', 'module', or 'both'
 # Stable Support #
@@ -121,10 +121,10 @@ archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.reddit.frontpage
 [Google-Photos-ReVanced]
 enabled = true
 app-name = "Google Photos"
-patches-source = "github:RookieEnough/De-Vanced"
-# patches-source = "gitlab:ReVanced/revanced-patches"
-cli-source = "github:MorpheApp/morphe-cli"
-# cli-source = "github:ReVanced/revanced-cli"
+patches-source = "RookieEnough/De-Vanced"
+# patches-source = "ReVanced/revanced-patches"
+cli-source = "MorpheApp/morphe-cli"
+# cli-source = "ReVanced/revanced-cli"
 rv-brand = "De-Vanced"
 arch = "arm64-v8a" # Options 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64', or 'universal'
 # version = "auto"
@@ -147,20 +147,22 @@ archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.a
 [Twitter-Piko]
 enabled = true
 app-name = "Twitter"
-patches-source = "github:crimera/piko"
-cli-source = "github:MorpheApp/morphe-cli"
+patches-source = "crimera/piko"
+cli-source = "MorpheApp/morphe-cli"
 rv-brand = "Piko"
 build-mode = "apk" # Options 'apk', 'module', or 'both'
-# version = "auto"
-version = "11.81.0-release.0" # PairIP Free
+version = "auto"
+# version = "11.81.0-release.0" # PairIP Free
 # version = "11.93.0-release.0"
 dpi = "120-640dpi" # Options '120-640dpi', or 'nodpi'
 include-stock = "split" # Options 'split', 'merged', or 'disable'
 patches-version = "dev" # Options 'latest', 'dev', or A specific version tag
+skip-sigcheck = true
 included-patches = """\
     'Bring back twitter' \
     'Dynamic color' \
     """
-apkmirror-dlurl = "https://www.apkmirror.com/apk/x-corp/twitter/"
-uptodown-dlurl = "https://twitter.en.uptodown.com/android"
-archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.twitter.android"
+# apkmirror-dlurl = "https://www.apkmirror.com/apk/x-corp/twitter/"
+# uptodown-dlurl = "https://twitter.en.uptodown.com/android"
+# archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.twitter.android"
+github-dlurl = "https://github.com/krvstek/uni-storage/releases/tag/x-twitter"
