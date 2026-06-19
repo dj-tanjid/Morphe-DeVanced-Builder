@@ -225,7 +225,6 @@ _req() {
 	
 	ip=$(echo "$ip" | xargs)
 
-	# Setup curl-impersonate client binary infrastructure dynamically inside environments
 	local curl_cmd="curl"
 	if [ ! -f "$BIN_DIR/curl_chrome" ] && [ "${OS}" != "Android" ]; then
 		mkdir -p "$BIN_DIR"
@@ -426,7 +425,6 @@ dl_apkmirror() {
 	local landing_url="https://www.apkmirror.com/uploads/?appcategory=${__APKMIRROR_CAT__}"
 	req "$landing_url" "$TEMP_DIR/apkm_land.tmp" >/dev/null 2>&1
 	
-	# Determine base paths dynamically matching browser execution parameters
 	apkmname=$(echo "${url##*/}" | sed 's/-//g')
 	url="https://www.apkmirror.com/apk/google-inc/${__APKMIRROR_CAT__}/${apkmname}-${version//./-}-release/"
 	
@@ -838,7 +836,7 @@ build_rv() {
 	local patcher_args patched_apk build_mode
 	local rv_brand_f=${args[rv_brand],,}
 	rv_brand_f=${rv_brand_f// /-}
-	if [ "${args[patcher_args]}" ]; then p_patcher_args+=("$(join_args "${args[patcher_args]}"); fi
+	if [ "${args[patcher_args]}" ]; then p_patcher_args+=("${args[patcher_args]}"); fi
 	for build_mode in "${build_mode_arr[@]}"; do
 		patcher_args=("${p_patcher_args[@]}")
 		pr "Building '${table}' in '$build_mode' mode"
