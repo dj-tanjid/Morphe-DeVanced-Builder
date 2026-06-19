@@ -225,46 +225,37 @@ _req() {
 	
 	ip=$(echo "$ip" | xargs)
 
-	local curl_cmd="curl"
-	if [ ! -f "$BIN_DIR/curl_chrome" ] && [ "${OS}" != "Android" ]; then
-		mkdir -p "$BIN_DIR"
-		curl -sL "https://github.com/lwthiker/curl-impersonate/releases/download/v0.6.1/curl-impersonate-v0.6.1.x86_64-linux-gnu.tar.gz" -o "$TEMP_DIR/curl_imp.tar.gz" && \
-		tar -xzf "$TEMP_DIR/curl_imp.tar.gz" -C "$BIN_DIR" curl_chrome 2>/dev/null || true
-	fi
-	if [ -f "$BIN_DIR/curl_chrome" ]; then
-		curl_cmd="$BIN_DIR/curl_chrome"
+	# Lightweight dynamic Python engine bridge using browser TLS handshakes
+	if [[ "$ip" =~ apkmirror\.com || "$ip" =~ uptodown\.com ]]; then
+		python3 -c "import curl_cffi" 2>/dev/null || python3 -m pip install -q curl_cffi
+		
+		local py_code
+		if [ "$op" = "-" ]; then
+			py_code="import sys; from curl_cffi import requests; r=requests.get('$ip', impersonate='chrome120', timeout=20); sys.stdout.write(r.text if r.status_code==200 else '')"
+			if ! python3 -c "$py_code" > "$dlp"; then
+				epr "Python browser request failed: $ip"
+				return 1
+			fi
+		else
+			py_code="from curl_cffi import requests; r=requests.get('$ip', impersonate='chrome120', timeout=300); f=open('$dlp', 'wb'); f.write(r.content); f.close()"
+			if ! python3 -c "$py_code"; then
+				epr "Python browser download failed: $ip"
+				return 1
+			fi
+		fi
+	else
+		if ! curl -L --connect-timeout 20 --retry 3 --retry-delay 4 -b "$TEMP_DIR/cookie.txt" -c "$TEMP_DIR/cookie.txt" --fail -s -S "$@" "$ip" -o "$dlp"; then
+			epr "Request failed: $ip"
+			return 1
+		fi
 	fi
 
-	if ! "$curl_cmd" -L \
-		--connect-timeout 20 \
-		--retry 3 \
-		--retry-delay 4 \
-		-b "$TEMP_DIR/cookie.txt" \
-		-c "$TEMP_DIR/cookie.txt" \
-		--fail -s -S "$@" "$ip" -o "$dlp"; then
-		epr "Request failed: $ip"
-		return 1
-	fi
 	if [ "$dlp" != - ]; then
 		mv -f "$dlp" "$op"
 	fi
 }
 
-req() { 
-	_req "$1" "$2" \
-		-H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
-		-H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8" \
-		-H "Accept-Language: en-US,en;q=0.9" \
-		-H "Sec-Ch-Ua: \"Chromium\";v=\"124\", \"Google Chrome\";v=\"124\", \"Not-A.Brand\";v=\"99\"" \
-		-H "Sec-Ch-Ua-Mobile: ?0" \
-		-H "Sec-Ch-Ua-Platform: \"Windows\"" \
-		-H "Sec-Fetch-Dest: document" \
-		-H "Sec-Fetch-Mode: navigate" \
-		-H "Sec-Fetch-Site: none" \
-		-H "Sec-Fetch-User: ?1" \
-		-H "Upgrade-Insecure-Requests: 1"
-}
-
+req() { _req "$1" "$2"; }
 gh_req() { _req "$1" "$2" -H "$GH_HEADER"; }
 gh_dl() {
 	if [ ! -f "$1" ]; then
