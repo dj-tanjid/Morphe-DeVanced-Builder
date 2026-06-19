@@ -16,7 +16,7 @@ arch = "arm64-v8a" # Options 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64', or 'un
 # version = "auto" # "20.51.39"
 # Experimental Support #
 # version = "21.23.492"
-version = "21.24.366"
+version = "21.24.367"
 excluded-patches = """\
     'Custom branding name for YouTube' \
     'Custom branding icon for YouTube' \
@@ -116,7 +116,7 @@ uptodown-dlurl = "https://reddit-official-app.en.uptodown.com/android"
 archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.reddit.frontpage"
 
 [Google-Photos-ReVanced]
-enabled = false
+enabled = true
 app-name = "Google Photos"
 patches-source = "RookieEnough/De-Vanced"
 # patches-source = "ReVanced/revanced-patches"
@@ -125,9 +125,8 @@ cli-source = "MorpheApp/morphe-cli"
 rv-brand = "De-Vanced"
 arch = "arm64-v8a" # Options 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64', or 'universal'
 # version = "auto"
-# version = "7.78.0.920664585"
-# version = "7.79.1.929394759"
-version = "7.80.0.929302933"
+# version = "7.80.0.929302933"
+version = "7.81.0.932521513"
 build-mode = "both" # Options 'apk', 'module', or 'both'
 # patches-version = "dev" # Options 'latest', 'dev', or A specific version tag
 included-patches = """\
