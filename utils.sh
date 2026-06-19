@@ -19,6 +19,14 @@ toml_prep() {
 		__TOML__=$(cat "$1")
 	else abort "config extension not supported"; fi
 }
+toml_prep() {
+	if [ ! -f "$1" ]; then return 1; fi
+	if [ "${1##*.}" == toml ]; then
+		__TOML__=$($TOML --output json --file "$1" .)
+	elif [ "${1##*.}" == json ]; then
+		__TOML__=$(cat "$1")
+	else abort "config extension not supported"; fi
+}
 toml_get_table_names() { jq -r -e 'to_entries[] | select(.value | type == "object") | .key' <<<"$__TOML__"; }
 toml_get_table_main() { jq -r -e 'to_entries | map(select(.value | type != "object")) | from_entries' <<<"$__TOML__"; }
 toml_get_table() { jq -r -e ".\"${1}\"" <<<"$__TOML__"; }
@@ -390,19 +398,18 @@ elif mode == "apkmirror_dl":
         category = url.rstrip("/").split("/")[-1]
         release_url = None
         
-        # Step 1: Scan recent release feeds directly first
+        # Scrape using any valid anchor tag to fix class dynamic structure changes
         feed_html = session.get(f"https://www.apkmirror.com/uploads/?appcategory={category}", timeout=20).text
         soup_feed = BeautifulSoup(feed_html, 'html.parser')
-        for a in soup_feed.select("a.fontBlack[href*='-release/']"):
+        for a in soup_feed.find_all("a", href=re.compile(r"-release/")):
             if version in a.get_text():
                 release_url = urljoin("https://www.apkmirror.com", a["href"])
                 break
                 
-        # Step 2: Fall back to dedicated global release search if missing from feed
         if not release_url:
             search_html = session.get(f"https://www.apkmirror.com/?post_type=app_release&searchtype=apk&s={category}+{version}", timeout=20).text
             soup_search = BeautifulSoup(search_html, 'html.parser')
-            for a in soup_search.select("a.fontBlack[href*='-release/']"):
+            for a in soup_search.find_all("a", href=re.compile(r"-release/")):
                 if version in a.get_text():
                     release_url = urljoin("https://www.apkmirror.com", a["href"])
                     break
@@ -955,7 +962,7 @@ build_rv() {
 	done
 }
 
-list_args() { tr -d '\t\r' <<<"$1" | tr -s ' ' | sed 's/" "/"\n"/g' | sed 's/\([^"]\)_/\1'\''\2/g' | grep -v '^$' || :; }
+list_args() { tr -d '\t\r' <<<"$1" | tr -s ' ' | sed 's/" "/"\n"/g' | sed 's/\([^"]\)"\([^"]\)/\1'\''\2/g' | grep -v '^$' || :; }
 join_args() { list_args "$1" | sed "s/^/${2} /" | paste -sd " " - || :; }
 
 module_config() {
