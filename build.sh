@@ -5,6 +5,12 @@ shopt -s nullglob
 
 source utils.sh
 
+# --- ADDED: Export core networking functions so build.sh can find them ---
+export -f _req
+export -f gh_dl
+export -f req
+# -------------------------------------------------------------------------
+
 trap "abort" INT
 
 if [ "${1-}" = "clean" ]; then
