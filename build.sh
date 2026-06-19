@@ -3,13 +3,13 @@
 set -euo pipefail
 shopt -s nullglob
 
-source utils.sh
-
-# --- ADDED: Export core networking functions so build.sh can find them ---
-export -f _req
-export -f gh_dl
-export -f req
-# -------------------------------------------------------------------------
+# Setup an initialization sequence for cross-script dependencies
+if [ -f utils.sh ]; then
+    source utils.sh
+else
+    echo "[-] Error: utils.sh not found." >&2
+    exit 1
+fi
 
 trap "abort" INT
 
@@ -60,10 +60,11 @@ for file in "$TEMP_DIR"/*/changelog.md; do
 done
 
 mkdir -p ${MODULE_TEMPLATE_DIR}/bin/arm64 ${MODULE_TEMPLATE_DIR}/bin/arm ${MODULE_TEMPLATE_DIR}/bin/x86 ${MODULE_TEMPLATE_DIR}/bin/x64
-gh_dl "${MODULE_TEMPLATE_DIR}/bin/arm64/cmpr" "https://github.com/j-hc/cmpr/releases/latest/download/cmpr-arm64-v8a"
-gh_dl "${MODULE_TEMPLATE_DIR}/bin/arm/cmpr" "https://github.com/j-hc/cmpr/releases/latest/download/cmpr-armeabi-v7a"
-gh_dl "${MODULE_TEMPLATE_DIR}/bin/x86/cmpr" "https://github.com/j-hc/cmpr/releases/latest/download/cmpr-x86"
-gh_dl "${MODULE_TEMPLATE_DIR}/bin/x64/cmpr" "https://github.com/j-hc/cmpr/releases/latest/download/cmpr-x86_64"
+
+bash -c "source utils.sh && gh_dl '${MODULE_TEMPLATE_DIR}/bin/arm64/cmpr' 'https://github.com/j-hc/cmpr/releases/latest/download/cmpr-arm64-v8a'"
+bash -c "source utils.sh && gh_dl '${MODULE_TEMPLATE_DIR}/bin/arm/cmpr' 'https://github.com/j-hc/cmpr/releases/latest/download/cmpr-armeabi-v7a'"
+bash -c "source utils.sh && gh_dl '${MODULE_TEMPLATE_DIR}/bin/x86/cmpr' 'https://github.com/j-hc/cmpr/releases/latest/download/cmpr-x86'"
+bash -c "source utils.sh && gh_dl '${MODULE_TEMPLATE_DIR}/bin/x64/cmpr' 'https://github.com/j-hc/cmpr/releases/latest/download/cmpr-x86_64'"
 
 idx=0
 for table_name in $(toml_get_table_names); do
