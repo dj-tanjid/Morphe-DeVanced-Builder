@@ -222,10 +222,14 @@ _req() {
 			return
 		fi
 	fi
+	
+	# Clean any trailing garbage or spaces out of target IPs
+	ip=$(echo "$ip" | xargs)
+
 	if ! curl -L \
-		--connect-timeout 10 \
-		--retry 2 \
-		--retry-delay 2 \
+		--connect-timeout 15 \
+		--retry 3 \
+		--retry-delay 3 \
 		-b "$TEMP_DIR/cookie.txt" \
 		-c "$TEMP_DIR/cookie.txt" \
 		--fail -s -S "$@" "$ip" -o "$dlp"; then
@@ -238,14 +242,16 @@ _req() {
 }
 
 req() { 
+	# Complete dynamic browser emulation layout initialization string
 	_req "$1" "$2" \
-		-H "User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/119.0" \
+		-H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0" \
 		-H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8" \
 		-H "Accept-Language: en-US,en;q=0.5" \
 		-H "Referer: https://www.apkmirror.com/" \
+		-H "Upgrade-Insecure-Requests: 1" \
 		-H "Sec-Fetch-Dest: document" \
 		-H "Sec-Fetch-Mode: navigate" \
-		-H "Sec-Fetch-Site: same-origin"
+		-H "Sec-Fetch-Site: cross-site"
 }
 
 gh_req() { _req "$1" "$2" -H "$GH_HEADER"; }
@@ -369,9 +375,9 @@ apkmirror_search() {
 	local appdpi=("nodpi" "anydpi")
 	if [ "$dpi" ]; then appdpi+=($dpi); fi
 
-	for ((n = 1; n < 40; n++)); do
+	for ((n = 1; n < 45; n++)); do
 		node=$($HTMLQ "div.table-row.headerFont:nth-last-child($n)" <<<"$resp")
-		if [ -z "$node" ]; then break; fi
+		if [ -z "$node" ]; then continue; fi
 		
 		local b_type
 		b_type=$($HTMLQ ".apkm-badge" --text <<<"$node" | xargs | tr '[:lower:]' '[:upper:]')
@@ -404,9 +410,15 @@ dl_apkmirror() {
 
 	if [ "$arch" = "arm-v7a" ]; then arch="armeabi-v7a"; fi
 	local resp node apkmname dlurl=""
+	
+	# Establish dynamic landing session parameters matching appcategory logic blocks
+	local landing_url="https://www.apkmirror.com/uploads/?appcategory=${__APKMIRROR_CAT__}"
+	req "$landing_url" "$TEMP_DIR/apkm_land.tmp" >/dev/null 2>&1
+	
 	apkmname=$($HTMLQ "h1.marginZero" --text <<<"$__APKMIRROR_RESP__")
 	apkmname="${apkmname,,}" apkmname="${apkmname// /-}" apkmname="${apkmname//[^a-z0-9-]/}"
-	url="${url}/${apkmname}-${version//./-}-release/"
+	url="https://www.apkmirror.com/apk/google-inc/${apkmname}/${apkmname}-${version//./-}-release/"
+	
 	resp=$(req "$url" -) || return 1
 
 	for type in APK BUNDLE; do
@@ -475,13 +487,23 @@ dl_uptodown() {
 		else return 1; fi
 	done
 	if [ -z "$versionURL" ]; then return 1; fi
-	versionURL=$(jq -e -r '.url + "/" + .extraURL + "/" + (.versionID | tostring)' <<<"$versionURL")
+	
+	# Explicit target calculation updates mapping modern download token paths
+	local v_url v_extra v_id
+	v_url=$(jq -r '.url' <<<"$versionURL")
+	v_extra=$(jq -r '.extraURL' <<<"$versionURL")
+	v_id=$(jq -r '.versionID' <<<"$versionURL")
+	versionURL="${v_url}/${v_extra}/${v_id}"
+	
 	resp=$(req "$versionURL" -) || return 1
 
 	local data_version files data_file_id node_class variant_html file_type
-	data_version=$($HTMLQ '.button.variants' --attribute data-version <<<"$resp") || return 1
-	if [ "$data_version" ]; then
-		files=$(req "${uptodown_dlurl%/*}/app/${data_code}/version/${data_version}/files" - | jq -e -r .content) || return 1
+	data_version=$($HTMLQ '.button.variants' --attribute data-version <<<"$resp") 2>/dev/null || data_version=""
+	
+	if [ -n "$data_version" ]; then
+		local base_domain
+		base_domain=$(echo "$uptodown_dlurl" | sed -E 's|(https://[^/]+).*|\1|')
+		files=$(req "${base_domain}/app/${data_code}/version/${data_version}/files" - | jq -e -r .content) || return 1
 		
 		local matched_variant=""
 		for target_bundle in "false" "true"; do
@@ -516,12 +538,7 @@ dl_uptodown() {
 
 	local data_url
 	data_url=$($HTMLQ "#detail-download-button" --attribute data-url <<<"$resp") || return 1
-	if [ "$is_bundle" = true ]; then
-		req "https://dw.uptodown.com/dwn/${data_url}" "$output.apkm" || return 1
-		merge_splits "${output}.apkm" "${output}"
-	else
-		req "https://dw.uptodown.com/dwn/${data_url}" "$output"
-	fi
+	req "https://dw.uptodown.com/dwn/${data_url}" "$output"
 }
 get_uptodown_pkg_name() { $HTMLQ --text "tr.full:nth-child(1) > td:nth-child(3)" <<<"$__UPTODOWN_RESP_PKG__"; }
 
@@ -529,13 +546,14 @@ get_uptodown_pkg_name() { $HTMLQ --text "tr.full:nth-child(1) > td:nth-child(3)"
 dl_archive() {
 	local url=$1 version=$2 output=$3 arch=$4
 	local path output_m version=${version// /}
+	local version_f=${version#v}
 
 	if [ -f "${output}.apkm" ]; then
 		merge_splits "${output}.apkm" "$output"
 		return 0
 	fi
 
-	path=$(grep -m1 "${version_f#v}-${arch// /}" <<<"$__ARCHIVE_RESP__") || return 1
+	path=$(grep -m1 "${version_f}-${arch// /}" <<<"$__ARCHIVE_RESP__" || grep -m1 "${version_f}" <<<"$__ARCHIVE_RESP__") || return 1
 	if [ "${path##*.}" = "apkm" ]; then output_m="${output}.apkm"; else output_m=$output; fi
 	req "${url}/${path}" "$output_m" || return 1
 	if [ "${path##*.}" = "apkm" ]; then merge_splits "$output_m" "$output"; fi
@@ -582,7 +600,6 @@ get_github_vers() {
 		echo "${versions[@]}" | tr ' ' '\n' | sort -u
 	fi
 }
-
 get_github_pkg_name() {
 	jq -r '.name // .tag_name' <<<"$__GITHUB_RESP__"
 }
