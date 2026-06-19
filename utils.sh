@@ -348,9 +348,8 @@ merge_splits() {
 run_python_backend() {
 	python3 -c "import curl_cffi" 2>/dev/null || python3 -m pip install -q curl_cffi bs4
 	
-	local p1="${1:-}" p2="${2:-}" p3="${3:-}" p4="${4:-}" p5="${5:-}" p6="${6:-}"
-	
-	python3 - <<'EOF'
+	# Safely supply positional variables into runtime script space via interpreter pipeline
+	python3 - "${1:-}" "${2:-}" "${3:-}" "${4:-}" "${5:-}" "${6:-}" <<'EOF'
 import sys, os, re, json
 from curl_cffi import requests
 from bs4 import BeautifulSoup
@@ -427,7 +426,7 @@ elif mode == "apkmirror_dl":
                 b_type = badge.get_text(strip=True).upper() if badge else "APK"
                 if b_type != target_type: continue
                 
-                cells = row.select("div.table-cell")
+                cells = row.select("div.table-row.headerFont")
                 if len(cells) < 4: continue
                 arch_text = cells[1].get_text(strip=True)
                 dpi_text = cells[3].get_text(strip=True)
@@ -530,7 +529,7 @@ elif mode == "uptodown_dl":
         with open(real_dest, "wb") as f: f.write(r_file.content)
         print("SUCCESS")
     except: sys.exit(1)
-EOF "$p1" "$p2" "$p3" "$p4" "$p5" "$p6"
+EOF
 }
 
 # -------------------- apkmirror wrappers --------------------
