@@ -5,7 +5,6 @@ CWD=$(pwd)
 TEMP_DIR="temp"
 BIN_DIR="bin"
 BUILD_DIR="build"
-# Added github into supported download stream arrays
 DL_SRCS=("direct" "github" "archive" "apkmirror" "uptodown")
 
 if [ "${GITHUB_TOKEN-}" ]; then GH_HEADER="Authorization: token ${GITHUB_TOKEN}"; else GH_HEADER=; fi
@@ -223,7 +222,9 @@ _req() {
 			return
 		fi
 	fi
-	if ! curl -L -c "$TEMP_DIR/cookie.txt" -b "$TEMP_DIR/cookie.txt" --connect-timeout 10 --retry 1 --fail -s -S "$@" "$ip" -o "$dlp"; then
+	ip=$(echo "$ip" | xargs)
+
+	if ! curl -L --connect-timeout 20 --retry 3 --retry-delay 4 -b "$TEMP_DIR/cookie.txt" -c "$TEMP_DIR/cookie.txt" --fail -s -S "$@" "$ip" -o "$dlp"; then
 		epr "Request failed: $ip"
 		return 1
 	fi
@@ -231,7 +232,8 @@ _req() {
 		mv -f "$dlp" "$op"
 	fi
 }
-req() { _req "$1" "$2" -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:151.0) Gecko/20100101 Firefox/151.0"; }
+
+req() { _req "$1" "$2" -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"; }
 gh_req() { _req "$1" "$2" -H "$GH_HEADER"; }
 gh_dl() {
 	if [ ! -f "$1" ]; then
@@ -342,14 +344,17 @@ merge_splits() {
 	return 0
 }
 
-# ----------------- Unified Python curl_cffi Scaffold -----------------
+# ----------------- Unified Python curl_cffi Backend -----------------
 run_python_backend() {
 	python3 -c "import curl_cffi" 2>/dev/null || python3 -m pip install -q curl_cffi bs4
+	
 	local p1="${1:-}" p2="${2:-}" p3="${3:-}" p4="${4:-}" p5="${5:-}" p6="${6:-}"
+	
 	python3 - <<EOF
-import sys, os, re
+import sys, os, re, json
 from curl_cffi import requests
 from bs4 import BeautifulSoup
+from urllib.parse import urljoin
 
 mode = "$p1"
 url = "$p2"
@@ -360,26 +365,10 @@ dpi = "$p6"
 
 session = requests.Session(impersonate="chrome120")
 
-def extract_apkm_version_url(base_url, ver):
-    try:
-        r = session.get(base_url, timeout=20)
-        soup = BeautifulSoup(r.text, 'html.parser')
-        title_el = soup.select_one("h1.marginZero")
-        title_txt = title_el.get_text(strip=True) if title_el else "app"
-        slug = re.sub(r'[^a-z0-9-]', '', title_txt.lower().replace(" ", "-"))
-        
-        match = re.search(r"apkmirror\.com/apk/([^/]+)/([^/]+)", base_url)
-        org = match.group(1) if match else "google-inc"
-        cat = match.group(2) if match else slug
-        
-        ver_slug = ver.replace(" ", "-").replace(".", "-")
-        return f"https://www.apkmirror.com/apk/{org}/{cat}/{cat}-{ver_slug}-release/"
-    except: return None
-
 if mode == "apkmirror_pkg":
     try:
         r = session.get(url, timeout=20)
-        m = re.search(r"play\.google\.com/store/apps/details\?id=([\\w.]+)", r.text)
+        m = re.search(r"play\.google\.com/store/apps/details\?id=([\w.]+)", r.text)
         if m: print(f"PKG:{m.group(1)}")
     except: sys.exit(1)
 
@@ -398,8 +387,20 @@ elif mode == "apkmirror_vers":
 
 elif mode == "apkmirror_dl":
     try:
-        target_url = extract_apkm_version_url(url, version)
-        r = session.get(target_url, timeout=20)
+        category = url.rstrip("/").split("/")[-1]
+        search_html = session.get(f"{url.rstrip('/')}/?s={version}", timeout=20).text
+        soup_search = BeautifulSoup(search_html, 'html.parser')
+        
+        release_url = None
+        for a in soup_search.select("a.fontBlack[href*='-release/']"):
+            if version in a.get_text() and f"/{category}/" in a.get("href", ""):
+                release_url = urljoin("https://www.apkmirror.com", a["href"])
+                break
+                
+        if not release_url:
+            sys.exit(1)
+            
+        r = session.get(release_url, timeout=20)
         soup = BeautifulSoup(r.text, 'html.parser')
         rows = soup.select("div.table-row.headerFont")
         
@@ -409,7 +410,6 @@ elif mode == "apkmirror_dl":
         dl_sub_url = None
         is_bundle = False
         
-        # Priority mapping loop: Prioritize APK before falling back to bundle formats
         for target_type in ["APK", "BUNDLE"]:
             for row in reversed(rows):
                 badge = row.select_one(".apkm-badge")
@@ -425,7 +425,7 @@ elif mode == "apkmirror_dl":
                 if arch_text in apparch and dpi_ok:
                     link = row.select_one("div.table-cell:first-child > a")
                     if link and link.get("href"):
-                        dl_sub_url = "https://www.apkmirror.com" + link["href"]
+                        dl_sub_url = urljoin("https://www.apkmirror.com", link["href"])
                         is_bundle = (target_type == "BUNDLE")
                         break
             if dl_sub_url: break
@@ -434,11 +434,11 @@ elif mode == "apkmirror_dl":
         
         soup_dl = BeautifulSoup(session.get(dl_sub_url).text, 'html.parser')
         btn = soup_dl.select_one("a.btn")
-        btn_url = "https://www.apkmirror.com" + btn["href"]
+        btn_url = urljoin("https://www.apkmirror.com", btn["href"])
         
         soup_final = BeautifulSoup(session.get(btn_url).text, 'html.parser')
         dl_link = soup_final.select_one("span > a[rel=nofollow]")
-        final_download_url = "https://www.apkmirror.com" + dl_link["href"]
+        final_download_url = urljoin("https://www.apkmirror.com", dl_link["href"])
         
         real_dest = dest_path + ".apkm" if is_bundle else dest_path
         with open(real_dest + ".is_bundle", "w") as f: f.write("true" if is_bundle else "false")
@@ -446,7 +446,8 @@ elif mode == "apkmirror_dl":
         r_file = session.get(final_download_url, timeout=300)
         with open(real_dest, "wb") as f: f.write(r_file.content)
         print("SUCCESS")
-    except: sys.exit(1)
+    except Exception as e:
+        sys.exit(1)
 
 elif mode == "uptodown_pkg":
     try:
@@ -521,7 +522,7 @@ elif mode == "uptodown_dl":
 EOF
 }
 
-# -------------------- apkmirror --------------------
+# -------------------- apkmirror wrappers --------------------
 get_apkmirror_resp() {
 	__APKMIRROR_RESP__=$(run_python_backend "apkmirror_pkg" "$1") || return 1
 	__APKMIRROR_CAT__="${1##*/}"
@@ -544,7 +545,7 @@ dl_apkmirror() {
 	[ -f "$output" ]
 }
 
-# -------------------- uptodown --------------------
+# -------------------- uptodown wrappers --------------------
 get_uptodown_resp() { __UPTODOWN_RESP__=$(run_python_backend "uptodown_pkg" "$1") || return 1; }
 get_uptodown_pkg_name() { grep -oP '^PKG:\K.*' <<<"$__UPTODOWN_RESP__"; }
 get_uptodown_vers() { run_python_backend "uptodown_vers" "$1"; }
@@ -944,7 +945,7 @@ build_rv() {
 	done
 }
 
-list_args() { tr -d '\t\r' <<<"$1" | tr -s ' ' | sed 's/" "/"\n"/g' | sed 's/\([^"]\)"\([^"]\)/\1'\''\2/g' | grep -v '^$' || :; }
+list_args() { tr -d '\t\r' <<<"$1" | tr -s ' ' | sed 's/" "/"\n"/g' | sed 's/\([^"]\)_/\1'\''\2/g' | grep -v '^$' || :; }
 join_args() { list_args "$1" | sed "s/^/${2} /" | paste -sd " " - || :; }
 
 module_config() {
