@@ -347,17 +347,21 @@ merge_splits() {
 # ----------------- Unified Python curl_cffi Backend -----------------
 run_python_scraper() {
 	python3 -c "import curl_cffi" 2>/dev/null || python3 -m pip install -q curl_cffi bs4
+	
+	# Fixed Unbound Variables: Safely inject positional arguments with fallback defaults
+	local p1="${1:-}" p2="${2:-}" p3="${3:-}" p4="${4:-}" p5="${5:-}" p6="${6:-}"
+	
 	python3 - <<EOF
 import sys, os, re, json
 from curl_cffi import requests
 from bs4 import BeautifulSoup
 
-mode = "$1"
-url = "$2"
-version = "$3"
-dest_path = "$4"
-arch = "$5"
-dpi = "$6"
+mode = "$p1"
+url = "$p2"
+version = "$p3"
+dest_path = "$p4"
+arch = "$p5"
+dpi = "$p6"
 
 session = requests.Session(impersonate="chrome120")
 
@@ -365,7 +369,6 @@ def get_apkmirror_version_page(base_url, ver):
     try:
         r = session.get(base_url, timeout=20)
         soup = BeautifulSoup(r.text, 'html.parser')
-        m = re.search(r"h1.marginZero", r.text)
         title_element = soup.select_one("h1.marginZero")
         title_text = title_element.get_text(strip=True) if title_element else "app"
         apkmname = re.sub(r'[^a-z0-9-]', '', title_text.lower().replace(" ", "-"))
