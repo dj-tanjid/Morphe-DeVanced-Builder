@@ -5,7 +5,8 @@ CWD=$(pwd)
 TEMP_DIR="temp"
 BIN_DIR="bin"
 BUILD_DIR="build"
-DL_SRCS=("direct" "archive" "apkmirror" "uptodown")
+# Added github to the array of download sources
+DL_SRCS=("direct" "github" "archive" "apkmirror" "uptodown")
 
 if [ "${GITHUB_TOKEN-}" ]; then GH_HEADER="Authorization: token ${GITHUB_TOKEN}"; else GH_HEADER=; fi
 NEXT_VER_CODE=${NEXT_VER_CODE:-$(date +'%Y%m%d')}
@@ -253,7 +254,7 @@ semver_validate() {
 	[ ${#ac} = 0 ]
 }
 get_patch_last_supported_ver() {
-	local list_patches=$1 pkg_name=$2 inc_sel=$3 _exc_sel=$4 _exclusive=$5 # TODO: resolve using all of these
+	local list_patches=$1 pkg_name=$2 inc_sel=$3 _exc_sel=$4 _exclusive=$5
 	local op
 	if [ "$inc_sel" ]; then
 		if ! op=$(awk '{$1=$1}1' <<<"$list_patches"); then
@@ -286,7 +287,6 @@ patches_list_versions() {
 	local cli_jar=$1 patches_jar=$2 pkg_name=$3 op cmd
 	local cmd_base="java -jar '$cli_jar' list-versions"
 
-	# TODO: remove this later
 	local cli_name
 	cli_name=$(basename "$cli_jar")
 	if [ "${cli_name::8}" = revanced ]; then cmd_base+=" -b"; fi
@@ -333,7 +333,6 @@ merge_splits() {
 		epr "APKEditor error: $OP"
 		return 1
 	fi
-	# sign the merged stock apk
 	if ! OP=$(java -jar "$APKSIGNER" sign --ks ks-p12.keystore --ks-pass pass:123456789 --key-pass pass:123456789 --ks-key-alias jhc \
 		--out "${output}" "${output}-unsigned"); then
 		epr "apksigner error: $OP"
@@ -348,37 +347,38 @@ apkmirror_search() {
 	local resp="$1" dpi="$2" arch="$3" apk_bundle="$4"
 	local dlurl="" node app_table emptyCheck
 
-	local apparch=('universal' 'noarch' 'arm64-v8a + armeabi-v7a')
-	if [ "$arch" != all ]; then
-		apparch+=("$arch")
-	fi
+	local apparch=('universal' 'noarch' 'arm64-v8a + armeabi-v7a' 'arm64-v8a + armeabi')
+	if [ "$arch" != all ]; then apparch+=("$arch"); fi
 
 	local appdpi=("nodpi" "anydpi")
-	if [ "$dpi" ]; then
-		appdpi+=($dpi)
-	fi
+	if [ "$dpi" ]; then appdpi+=($dpi); fi
 
+	# Matches apkmirror.py parsing approach for standard table blocks
 	for ((n = 1; n < 40; n++)); do
-		node=$($HTMLQ "div.table-row.headerFont:nth-last-child($n)" -r "span:nth-child(n+3)" <<<"$resp")
+		node=$($HTMLQ "div.table-row.headerFont:nth-last-child($n)" <<<"$resp")
 		if [ -z "$node" ]; then break; fi
-		emptyCheck=$($HTMLQ -t -w "div.table-cell:nth-child(1) > a:nth-child(1)" <<<"$node" | xargs)
-		if [ -z "$emptyCheck" ]; then break; fi
-		app_table=$($HTMLQ --text --ignore-whitespace <<<"$node")
-		if [ "$(sed -n 3p <<<"$app_table")" != "$apk_bundle" ]; then continue; fi
-		dlurl=$($HTMLQ --base https://www.apkmirror.com --attribute href "div:nth-child(1) > a:nth-child(1)" <<<"$node")
-		if isoneof "$(sed -n 6p <<<"$app_table")" "${appdpi[@]}" &&
-			isoneof "$(sed -n 4p <<<"$app_table")" "${apparch[@]}"; then
-			echo "$dlurl"
-			return 0
+		
+		local b_type
+		b_type=$($HTMLQ ".apkm-badge" --text <<<"$node" | xargs | tr '[:lower:]' '[:upper:]')
+		[ -z "$b_type" ] && b_type="APK"
+		if [ "$b_type" != "$apk_bundle" ]; then continue; fi
+
+		local arch_text dpi_text
+		arch_text=$($HTMLQ "div.table-cell:nth-child(2)" --text <<<"$node" | xargs)
+		dpi_text=$($HTMLQ "div.table-cell:nth-child(4)" --text <<<"$node" | xargs)
+
+		dlurl=$($HTMLQ --base https://www.apkmirror.com --attribute href "div.table-cell:nth-child(1) > a" <<<"$node")
+		
+		if isoneof "$arch_text" "${apparch[@]}"; then
+			if [ -z "$dpi_text" ] || isoneof "$dpi_text" "${appdpi[@]}" || [[ "$dpi_text" =~ [0-9]+-640dpi ]]; then
+				echo "$dlurl"
+				return 0
+			fi
 		fi
 	done
-	if [ "$n" -eq 2 ] && [ "$dlurl" ]; then
-		# only one apk exists, return it
-		echo "$dlurl"
-		return 0
-	fi
 	return 1
 }
+
 dl_apkmirror() {
 	local url=$1 version=${2// /-} output=$3 arch=$4 dpi=$5 is_bundle=false
 
@@ -388,24 +388,22 @@ dl_apkmirror() {
 	fi
 
 	if [ "$arch" = "arm-v7a" ]; then arch="armeabi-v7a"; fi
-	local resp node app_table apkmname dlurl=""
+	local resp node apkmname dlurl=""
 	apkmname=$($HTMLQ "h1.marginZero" --text <<<"$__APKMIRROR_RESP__")
 	apkmname="${apkmname,,}" apkmname="${apkmname// /-}" apkmname="${apkmname//[^a-z0-9-]/}"
 	url="${url}/${apkmname}-${version//./-}-release/"
 	resp=$(req "$url" -) || return 1
-	node=$($HTMLQ "div.table-row.headerFont:nth-last-child(1)" -r "span:nth-child(n+3)" <<<"$resp")
-	if [ "$node" ]; then
-		for type in APK BUNDLE; do
-			if dlurl=$(apkmirror_search "$resp" "$dpi" "$arch" "$type"); then
-				if [ "$type" = "BUNDLE" ]; then
-					is_bundle=true
-				else is_bundle=false; fi
-				break 2
-			fi
-		done
-		if [ -z "$dlurl" ]; then return 1; fi
-		resp=$(req "$dlurl" -)
-	fi
+
+	# Prioritize APK first, then fallback to BUNDLE if not available
+	for type in APK BUNDLE; do
+		if dlurl=$(apkmirror_search "$resp" "$dpi" "$arch" "$type"); then
+			if [ "$type" = "BUNDLE" ]; then is_bundle=true; else is_bundle=false; fi
+			break
+		fi
+	done
+
+	if [ -z "$dlurl" ]; then return 1; fi
+	resp=$(req "$dlurl" -)
 	url=$(echo "$resp" | $HTMLQ --base https://www.apkmirror.com --attribute href "a.btn") || return 1
 	url=$(req "$url" - | $HTMLQ --base https://www.apkmirror.com --attribute href "span > a[rel = nofollow]") || return 1
 
@@ -449,50 +447,63 @@ dl_uptodown() {
 	if [ "$arch" = "arm-v7a" ]; then arch="armeabi-v7a"; fi
 
 	local apparch=('arm64-v8a, armeabi-v7a, x86_64' 'arm64-v8a, armeabi-v7a, x86, x86_64' 'arm64-v8a, armeabi-v7a')
-	if [ "$arch" != all ]; then
-		apparch+=("$arch")
-	fi
+	if [ "$arch" != all ]; then apparch+=("$arch"); fi
 
-	local op resp data_code
+	local op resp data_code versionURL="" is_bundle=false
 	data_code=$($HTMLQ "#detail-app-name" --attribute data-code <<<"$__UPTODOWN_RESP__")
-	local versionURL=""
-	local is_bundle=false
+	
 	for i in {1..20}; do
 		resp=$(req "${uptodown_dlurl}/apps/${data_code}/versions/${i}" -)
-		if ! op=$(jq -e -r ".data | map(select(.version == \"${version}\")) | .[0]" <<<"$resp"); then
-			continue
-		fi
-		if [ "$(jq -e -r ".kindFile" <<<"$op")" = "xapk" ]; then is_bundle=true; fi
-		if versionURL=$(jq -e -r '.versionURL' <<<"$op"); then break; else return 1; fi
+		if ! op=$(jq -e -r ".data | map(select(.version == \"${version}\")) | .[0]" <<<"$resp"); then continue; fi
+		if versionURL=$(jq -e -r '.versionURL' <<<"$op"); then 
+			[ "$(jq -e -r ".kindFile" <<<"$op")" = "xapk" ] && is_bundle=true
+			break
+		else return 1; fi
 	done
 	if [ -z "$versionURL" ]; then return 1; fi
 	versionURL=$(jq -e -r '.url + "/" + .extraURL + "/" + (.versionID | tostring)' <<<"$versionURL")
 	resp=$(req "$versionURL" -) || return 1
 
-	local data_version files node_arch="" data_file_id node_class
+	local data_version files data_file_id node_class variant_html file_type
 	data_version=$($HTMLQ '.button.variants' --attribute data-version <<<"$resp") || return 1
 	if [ "$data_version" ]; then
 		files=$(req "${uptodown_dlurl%/*}/app/${data_code}/version/${data_version}/files" - | jq -e -r .content) || return 1
-		for ((n = 1; n < 12; n += 1)); do
-			node_class=$($HTMLQ -w -t ".content > :nth-child($n)" --attribute class <<<"$files") || return 1
-			if [ "$node_class" != "variant" ]; then
-				node_arch=$($HTMLQ -w -t ".content > :nth-child($n)" <<<"$files" | xargs) || return 1
-				continue
-			fi
-			if [ -z "$node_arch" ]; then return 1; fi
-			if ! isoneof "$node_arch" "${apparch[@]}"; then continue; fi
+		
+		# Prioritization fix: Run double-loop to process standard files (false) before split variants (true)
+		local matched_variant=""
+		for target_bundle in "false" "true"; do
+			local node_arch=""
+			for ((n = 1; n < 12; n += 1)); do
+				node_class=$($HTMLQ -w -t ".content > :nth-child($n)" --attribute class <<<"$files") 2>/dev/null || continue
+				if [ "$node_class" != "variant" ]; then
+					node_arch=$($HTMLQ -w -t ".content > :nth-child($n)" <<<"$files" | xargs) 2>/dev/null || continue
+					continue
+				fi
+				if [ -z "$node_arch" ] || ! isoneof "$node_arch" "${apparch[@]}"; then continue; fi
 
-			file_type=$($HTMLQ -w -t ".content > :nth-child($n) > .v-file > span" <<<"$files") || return 1
-			if [ "$file_type" = "xapk" ]; then is_bundle=true; else is_bundle=false; fi
-			data_file_id=$($HTMLQ ".content > :nth-child($n) > .v-report" --attribute data-file-id <<<"$files") || return 1
-			resp=$(req "${uptodown_dlurl}/download/${data_file_id}-x" -)
-			break
+				file_type=$($HTMLQ -w -t ".content > :nth-child($n) > .v-file > span" <<<"$files") 2>/dev/null
+				local current_bundle=false
+				[ "$file_type" = "xapk" ] && current_bundle=true
+
+				if [ "$current_bundle" = "$target_bundle" ]; then
+					data_file_id=$($HTMLQ ".content > :nth-child($n) > .v-report" --attribute data-file-id <<<"$files") || return 1
+					is_bundle=$current_bundle
+					matched_variant="${uptodown_dlurl}/download/${data_file_id}-x"
+					break 2
+				fi
+			done
 		done
-		if [ $n -eq 12 ]; then return 1; fi
+
+		if [ -n "$matched_variant" ]; then
+			resp=$(req "$matched_variant" -)
+		else
+			return 1
+		fi
 	fi
+
 	local data_url
 	data_url=$($HTMLQ "#detail-download-button" --attribute data-url <<<"$resp") || return 1
-	if [ $is_bundle = true ]; then
+	if [ "$is_bundle" = true ]; then
 		req "https://dw.uptodown.com/dwn/${data_url}" "$output.apkm" || return 1
 		merge_splits "${output}.apkm" "${output}"
 	else
@@ -512,15 +523,9 @@ dl_archive() {
 	fi
 
 	path=$(grep -m1 "${version_f#v}-${arch// /}" <<<"$__ARCHIVE_RESP__") || return 1
-	if [ "${path##*.}" = "apkm" ]; then
-		output_m="${output}.apkm"
-	else
-		output_m=$output
-	fi
+	if [ "${path##*.}" = "apkm" ]; then output_m="${output}.apkm"; else output_m=$output; fi
 	req "${url}/${path}" "$output_m" || return 1
-	if [ "${path##*.}" = "apkm" ]; then
-		merge_splits "$output_m" "$output"
-	fi
+	if [ "${path##*.}" = "apkm" ]; then merge_splits "$output_m" "$output"; fi
 }
 get_archive_resp() {
 	local r
@@ -530,6 +535,100 @@ get_archive_resp() {
 }
 get_archive_vers() { sed 's/^[^-]*-//;s/-\(all\|arm64-v8a\|arm-v7a\)\.apk//g' <<<"$__ARCHIVE_RESP__"; }
 get_archive_pkg_name() { echo "$__ARCHIVE_PKG_NAME__"; }
+
+# -------------------- github --------------------
+get_github_resp() {
+	local url=$1 owner repo tag api_url
+	if [[ "$url" =~ github\.com/([^/]+)/([^/]+)/releases/tag/([^/]+) ]]; then
+		owner="${BASH_REMATCH[1]}"
+		repo="${BASH_REMATCH[2]}"
+		tag="${BASH_REMATCH[3]}"
+	else
+		return 1
+	fi
+	api_url="https://api.github.com/repos/${owner}/${repo}/releases/tags/${tag}"
+	__GITHUB_RESP__=$(gh_req "$api_url" -) || return 1
+}
+get_github_vers() {
+	local name prefix ver versions=()
+	name=$(jq -r '.name // empty' <<<"$__GITHUB_RESP__")
+	[ -z "$name" ] && jq -r '.tag_name' <<<"$__GITHUB_RESP__" && return
+	prefix="${name}-"
+	
+	while read -r asset_name; do
+		[[ ! "$asset_name" =~ \.(apk|apkm)$ ]] && continue
+		[[ "$asset_name" != "$prefix"* ]] && continue
+		ver="${asset_name#"$prefix"}"
+		ver=$(sed -E 's/(-(all|arm64-v8a|armeabi-v7a|x86_64|x86))?(\.apk\.apkm|\.apk|\.apkm)$//I' <<<"$ver")
+		versions+=("$ver")
+	done < <(jq -r '.assets[].name' <<<"$__GITHUB_RESP__")
+	
+	if [ ${#versions[@]} -eq 0 ]; then
+		jq -r '.tag_name' <<<"$__GITHUB_RESP__"
+	else
+		echo "${versions[@]}" | tr ' ' '\n' | sort -u
+	fi
+}
+get_github_pkg_name() {
+	jq -r '.name // .tag_name' <<<"$__GITHUB_RESP__"
+}
+dl_github() {
+	local url=$1 version=$2 output=$3 arch=$4 dpi=$5 is_bundle=false
+	local version_f asset matches=() target_asset=""
+	version_f=$(echo "${version// /}" | sed 's/^v//')
+
+	if [ "$arch" = "arm-v7a" ]; then arch="armeabi-v7a"; fi
+
+	while read -r row; do
+		local name url_dl
+		name=$(cut -f1 <<<"$row")
+		url_dl=$(cut -f2 <<<"$row")
+		[[ ! "$name" =~ \.(apk|apkm)$ ]] && continue
+		if [ -n "$version_f" ] && [[ "$name" != *"$version_f"* ]]; then continue; fi
+		
+		local file_arch="all"
+		if [[ "$name" =~ -(all|arm64-v8a|armeabi-v7a|x86_64|x86) ]]; then
+			file_arch="${BASH_REMATCH[1]}"
+		fi
+
+		if [ "$arch" = "all" ] || [ "$arch" = "both" ]; then
+			[ "$file_arch" = "all" ] && matches+=("$name|$url_dl")
+		else
+			{ [ "$file_arch" = "$arch" ] || [ "$file_arch" = "all" ]; } && matches+=("$name|$url_dl")
+		fi
+	done < <(jq -r '.assets[] | \(.name)\t\(.browser_download_url)' <<<"$__GITHUB_RESP__")
+
+	# Prioritize standalone .apk architecture options over bundles
+	for pair in "${matches[@]}"; do
+		local n="${pair%%|*}" u="${pair#*|}"
+		if [[ "$n" =~ -"$arch" ]] && [[ "$n" =~ \.apk$ ]]; then
+			target_asset="$u"; [ "$n" = "*.apkm" ] && is_bundle=true; break
+		fi
+	done
+	if [ -z "$target_asset" ]; then
+		for pair in "${matches[@]}"; do
+			local n="${pair%%|*}" u="${pair#*|}"
+			if [[ "$n" =~ \.apk$ ]]; then
+				target_asset="$u"; break
+			fi
+		done
+	fi
+	if [ -z "$target_asset" ] && [ ${#matches[@]} -gt 0 ]; then
+		local pair="${matches[0]}"
+		local n="${pair%%|*}" u="${pair#*|}"
+		target_asset="$u"
+		[[ "$n" = *.apkm ]] && is_bundle=true
+	fi
+
+	if [ -z "$target_asset" ]; then epr "No matching asset variant found on GitHub Release"; return 1; fi
+
+	if [ "$is_bundle" = true ]; then
+		gh_dl "${output}.apkm" "$target_asset" || return 1
+		merge_splits "${output}.apkm" "${output}"
+	else
+		gh_dl "${output}" "$target_asset" || return 1
+	fi
+}
 
 # -------------------- direct --------------------
 dl_direct() {
@@ -549,7 +648,6 @@ patch_apk() {
 	local cmd="java -jar '$cli_jar' patch '$stock_input' --purge -o '$patched_apk' -p '$patches_jar' --keystore=ks.keystore \
     --keystore-entry-password=123456789 --keystore-password=123456789 --signer=jhc --keystore-entry-alias=jhc -t '$patched_apk-tmp' $patcher_args"
 
-	# TODO: remove this later
 	local cli_name
 	cli_name=$(basename "$cli_jar")
 	if [ "${cli_name::8}" = revanced ]; then cmd+=" -b"; fi
@@ -823,5 +921,6 @@ author=dj_tanjid | j-hc
 banner=https://raw.githubusercontent.com/dj-tanjid/Morphe-ReVancedX-Builder/teejay/${1}/banner.webp
 description=${4}" >"${6}/module.prop"
 
-	if [ "$ENABLE_MODULE_UPDATE" = true ]; then echo "updateJson=${5}" >>"${6}/module.prop"; fi
+	if [ "$ENABLE_MODULE_UPDATE" = true ]; then echo
+	"updateJson=${5}" >>"${6}/module.prop"; fi
 }
