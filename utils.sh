@@ -364,7 +364,6 @@ dpi = sys.argv[6] if len(sys.argv) > 6 else ""
 session = requests.Session(impersonate="chrome120")
 
 if mode == "apkmirror_pkg":
-    # Automated robust fallback mapping to recover package names under proxy block conditions
     resolved_pkg = None
     if "youtube-music" in url: resolved_pkg = "com.google.android.apps.youtube.music"
     elif "youtube" in url: resolved_pkg = "com.google.android.youtube"
@@ -400,29 +399,12 @@ elif mode == "apkmirror_vers":
 
 elif mode == "apkmirror_dl":
     try:
-        category = url.rstrip("/").split("/")[-1]
-        release_url = None
-        ver_normalized = version.replace(".", "-")
+        m_url = re.search(r"apkmirror\.com/apk/([^/]+)/([^/]+)", url)
+        if not m_url: sys.exit(1)
+        org, cat = m_url.group(1), m_url.group(2)
+        ver_slug = version.replace(" ", "-").replace(".", "-")
         
-        feed_html = session.get(f"https://www.apkmirror.com/uploads/?appcategory={category}", timeout=20).text
-        soup_feed = BeautifulSoup(feed_html, 'html.parser')
-        for a in soup_feed.find_all("a", href=re.compile(r"-release/")):
-            href_str = a.get("href", "")
-            if version in a.get_text() or ver_normalized in href_str:
-                release_url = urljoin("https://www.apkmirror.com", href_str)
-                break
-                
-        if not release_url:
-            search_html = session.get(f"https://www.apkmirror.com/?post_type=app_release&searchtype=apk&s={category}+{version}", timeout=20).text
-            soup_search = BeautifulSoup(search_html, 'html.parser')
-            for a in soup_search.find_all("a", href=re.compile(r"-release/")):
-                href_str = a.get("href", "")
-                if version in a.get_text() or ver_normalized in href_str:
-                    release_url = urljoin("https://www.apkmirror.com", href_str)
-                    break
-                    
-        if not release_url:
-            sys.exit(1)
+        release_url = f"https://www.apkmirror.com/apk/{org}/{cat}/{cat}-{ver_slug}-release/"
             
         r = session.get(release_url, timeout=20)
         soup = BeautifulSoup(r.text, 'html.parser')
@@ -440,8 +422,10 @@ elif mode == "apkmirror_dl":
                 b_type = badge.get_text(strip=True).upper() if badge else "APK"
                 if b_type != target_type: continue
                 
-                cells = row.select("div.table-row.headerFont")
+                # Fixed HTML Element Selector Layer
+                cells = row.select("div.table-cell")
                 if len(cells) < 4: continue
+                
                 arch_text = cells[1].get_text(strip=True)
                 dpi_text = cells[3].get_text(strip=True)
                 
@@ -458,10 +442,12 @@ elif mode == "apkmirror_dl":
         
         soup_dl = BeautifulSoup(session.get(dl_sub_url).text, 'html.parser')
         btn = soup_dl.select_one("a.btn")
+        if not btn: sys.exit(1)
         btn_url = urljoin("https://www.apkmirror.com", btn["href"])
         
         soup_final = BeautifulSoup(session.get(btn_url).text, 'html.parser')
         dl_link = soup_final.select_one("span > a[rel=nofollow]")
+        if not dl_link: sys.exit(1)
         final_download_url = urljoin("https://www.apkmirror.com", dl_link["href"])
         
         real_dest = dest_path + ".apkm" if is_bundle else dest_path
@@ -548,11 +534,12 @@ EOF
 
 # -------------------- apkmirror wrappers --------------------
 get_apkmirror_resp() {
+	__APKMIRROR_URL__="$1"
 	__APKMIRROR_RESP__=$(run_python_backend "apkmirror_pkg" "$1") || return 1
 	__APKMIRROR_CAT__="${1##*/}"
 }
 get_apkmirror_pkg_name() { grep -oP '^PKG:\K.*' <<<"$__APKMIRROR_RESP__"; }
-get_apkmirror_vers() { run_python_backend "apkmirror_vers" "$1"; }
+get_apkmirror_vers() { run_python_backend "apkmirror_vers" "$__APKMIRROR_URL__"; }
 
 dl_apkmirror() {
 	local url=$1 version=$2 output=$3 arch=$4 dpi=$5
@@ -570,9 +557,12 @@ dl_apkmirror() {
 }
 
 # -------------------- uptodown wrappers --------------------
-get_uptodown_resp() { __UPTODOWN_RESP__=$(run_python_backend "uptodown_pkg" "$1") || return 1; }
+get_uptodown_resp() { 
+	__UPTODOWN_URL__="$1"
+	__UPTODOWN_RESP__=$(run_python_backend "uptodown_pkg" "$1") || return 1
+}
 get_uptodown_pkg_name() { grep -oP '^PKG:\K.*' <<<"$__UPTODOWN_RESP__"; }
-get_uptodown_vers() { run_python_backend "uptodown_vers" "$1"; }
+get_uptodown_vers() { run_python_backend "uptodown_vers" "$__UPTODOWN_URL__"; }
 
 dl_uptodown() {
 	local url=$1 version=$2 output=$3 arch=$4 dpi=$5
