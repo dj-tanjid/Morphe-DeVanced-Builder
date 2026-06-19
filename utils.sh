@@ -379,24 +379,34 @@ elif mode == "apkmirror_vers":
         soup = BeautifulSoup(r.text, 'html.parser')
         vers = []
         for a in soup.select("#primary a.fontBlack[href*='-release/']"):
-            txt = a.get_text(strip=True)
-            if "beta" not in txt.lower() and "alpha" not in txt.lower():
-                vers.append(txt.split()[-1])
+            text = a.get_text(strip=True)
+            if "beta" not in text.lower() and "alpha" not in text.lower():
+                vers.append(text.split()[-1])
         print("\n".join(vers))
     except: sys.exit(1)
 
 elif mode == "apkmirror_dl":
     try:
         category = url.rstrip("/").split("/")[-1]
-        search_html = session.get(f"{url.rstrip('/')}/?s={version}", timeout=20).text
-        soup_search = BeautifulSoup(search_html, 'html.parser')
-        
         release_url = None
-        for a in soup_search.select("a.fontBlack[href*='-release/']"):
-            if version in a.get_text() and f"/{category}/" in a.get("href", ""):
+        
+        # Step 1: Scan recent release feeds directly first
+        feed_html = session.get(f"https://www.apkmirror.com/uploads/?appcategory={category}", timeout=20).text
+        soup_feed = BeautifulSoup(feed_html, 'html.parser')
+        for a in soup_feed.select("a.fontBlack[href*='-release/']"):
+            if version in a.get_text():
                 release_url = urljoin("https://www.apkmirror.com", a["href"])
                 break
                 
+        # Step 2: Fall back to dedicated global release search if missing from feed
+        if not release_url:
+            search_html = session.get(f"https://www.apkmirror.com/?post_type=app_release&searchtype=apk&s={category}+{version}", timeout=20).text
+            soup_search = BeautifulSoup(search_html, 'html.parser')
+            for a in soup_search.select("a.fontBlack[href*='-release/']"):
+                if version in a.get_text():
+                    release_url = urljoin("https://www.apkmirror.com", a["href"])
+                    break
+                    
         if not release_url:
             sys.exit(1)
             
