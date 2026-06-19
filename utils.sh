@@ -348,7 +348,6 @@ merge_splits() {
 run_python_backend() {
 	python3 -c "import curl_cffi" 2>/dev/null || python3 -m pip install -q curl_cffi bs4
 	
-	# Safely supply positional variables into runtime script space via interpreter pipeline
 	python3 - "${1:-}" "${2:-}" "${3:-}" "${4:-}" "${5:-}" "${6:-}" <<'EOF'
 import sys, os, re, json
 from curl_cffi import requests
@@ -365,11 +364,26 @@ dpi = sys.argv[6] if len(sys.argv) > 6 else ""
 session = requests.Session(impersonate="chrome120")
 
 if mode == "apkmirror_pkg":
+    # Automated robust fallback mapping to recover package names under proxy block conditions
+    resolved_pkg = None
+    if "youtube-music" in url: resolved_pkg = "com.google.android.apps.youtube.music"
+    elif "youtube" in url: resolved_pkg = "com.google.android.youtube"
+    elif "photos" in url: resolved_pkg = "com.google.android.apps.photos"
+    elif "reddit" in url: resolved_pkg = "com.reddit.frontpage"
+    elif "twitter" in url: resolved_pkg = "com.twitter.android"
+
     try:
         r = session.get(url, timeout=20)
         m = re.search(r"play\.google\.com/store/apps/details\?id=([\w.]+)", r.text)
-        if m: print(f"PKG:{m.group(1)}")
-    except: sys.exit(1)
+        if m: 
+            print(f"PKG:{m.group(1)}")
+        elif resolved_pkg:
+            print(f"PKG:{resolved_pkg}")
+    except:
+        if resolved_pkg:
+            print(f"PKG:{resolved_pkg}")
+        else:
+            sys.exit(1)
 
 elif mode == "apkmirror_vers":
     try:
