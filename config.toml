@@ -5,7 +5,7 @@ parallel-jobs = 1
 # see https://github.com/j-hc/revanced-magisk-module/blob/main/CONFIG.md for more detailed explanations
 
 [YouTube-Morphe]
-enabled = true
+enabled = false
 app-name = "YouTube"
 patches-source = "MorpheApp/morphe-patches"
 cli-source = "MorpheApp/morphe-cli"
@@ -91,7 +91,7 @@ uptodown-dlurl = "https://youtube-music.en.uptodown.com/android"
 archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.apps.youtube.music"
 
 [Reddit-Morphe]
-enabled = true
+enabled = false
 app-name = "Reddit"
 patches-source = "MorpheApp/morphe-patches"
 cli-source = "MorpheApp/morphe-cli"
@@ -116,7 +116,7 @@ uptodown-dlurl = "https://reddit-official-app.en.uptodown.com/android"
 archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.reddit.frontpage"
 
 [Google-Photos-ReVanced]
-enabled = true
+enabled = false
 app-name = "Google Photos"
 patches-source = "RookieEnough/De-Vanced"
 # patches-source = "ReVanced/revanced-patches"
