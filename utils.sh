@@ -222,40 +222,18 @@ _req() {
 			return
 		fi
 	fi
-	
 	ip=$(echo "$ip" | xargs)
 
-	# Lightweight dynamic Python engine bridge using browser TLS handshakes
-	if [[ "$ip" =~ apkmirror\.com || "$ip" =~ uptodown\.com ]]; then
-		python3 -c "import curl_cffi" 2>/dev/null || python3 -m pip install -q curl_cffi
-		
-		local py_code
-		if [ "$op" = "-" ]; then
-			py_code="import sys; from curl_cffi import requests; r=requests.get('$ip', impersonate='chrome120', timeout=20); sys.stdout.write(r.text if r.status_code==200 else '')"
-			if ! python3 -c "$py_code" > "$dlp"; then
-				epr "Python browser request failed: $ip"
-				return 1
-			fi
-		else
-			py_code="from curl_cffi import requests; r=requests.get('$ip', impersonate='chrome120', timeout=300); f=open('$dlp', 'wb'); f.write(r.content); f.close()"
-			if ! python3 -c "$py_code"; then
-				epr "Python browser download failed: $ip"
-				return 1
-			fi
-		fi
-	else
-		if ! curl -L --connect-timeout 20 --retry 3 --retry-delay 4 -b "$TEMP_DIR/cookie.txt" -c "$TEMP_DIR/cookie.txt" --fail -s -S "$@" "$ip" -o "$dlp"; then
-			epr "Request failed: $ip"
-			return 1
-		fi
+	if ! curl -L --connect-timeout 20 --retry 3 --retry-delay 4 -b "$TEMP_DIR/cookie.txt" -c "$TEMP_DIR/cookie.txt" --fail -s -S "$@" "$ip" -o "$dlp"; then
+		epr "Request failed: $ip"
+		return 1
 	fi
-
 	if [ "$dlp" != - ]; then
 		mv -f "$dlp" "$op"
 	fi
 }
 
-req() { _req "$1" "$2"; }
+req() { _req "$1" "$2" -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"; }
 gh_req() { _req "$1" "$2" -H "$GH_HEADER"; }
 gh_dl() {
 	if [ ! -f "$1" ]; then
@@ -366,180 +344,227 @@ merge_splits() {
 	return 0
 }
 
-# -------------------- apkmirror --------------------
-apkmirror_search() {
-	local resp="$1" dpi="$2" arch="$3" apk_bundle="$4"
-	local dlurl="" node app_table emptyCheck
+# ----------------- Unified Python curl_cffi Backend -----------------
+run_python_scraper() {
+	python3 -c "import curl_cffi" 2>/dev/null || python3 -m pip install -q curl_cffi bs4
+	python3 - <<EOF
+import sys, os, re, json
+from curl_cffi import requests
+from bs4 import BeautifulSoup
 
-	local apparch=('universal' 'noarch' 'arm64-v8a + armeabi-v7a' 'arm64-v8a + armeabi')
-	if [ "$arch" != all ]; then apparch+=("$arch"); fi
+mode = "$1"
+url = "$2"
+version = "$3"
+dest_path = "$4"
+arch = "$5"
+dpi = "$6"
 
-	local appdpi=("nodpi" "anydpi")
-	if [ "$dpi" ]; then appdpi+=($dpi); fi
+session = requests.Session(impersonate="chrome120")
 
-	for ((n = 1; n < 45; n++)); do
-		node=$($HTMLQ "div.table-row.headerFont:nth-last-child($n)" <<<"$resp")
-		if [ -z "$node" ]; then continue; fi
-		
-		local b_type
-		b_type=$($HTMLQ ".apkm-badge" --text <<<"$node" | xargs | tr '[:lower:]' '[:upper:]')
-		[ -z "$b_type" ] && b_type="APK"
-		if [ "$b_type" != "$apk_bundle" ]; then continue; fi
+def get_apkmirror_version_page(base_url, ver):
+    try:
+        r = session.get(base_url, timeout=20)
+        soup = BeautifulSoup(r.text, 'html.parser')
+        m = re.search(r"h1.marginZero", r.text)
+        title_element = soup.select_one("h1.marginZero")
+        title_text = title_element.get_text(strip=True) if title_element else "app"
+        apkmname = re.sub(r'[^a-z0-9-]', '', title_text.lower().replace(" ", "-"))
+        
+        match = re.search(r"apkmirror\.com/apk/([^/]+)/([^/]+)", base_url)
+        org = match.group(1) if match else "google-inc"
+        cat = match.group(2) if match else apkmname
+        
+        ver_slug = ver.replace(" ", "-").replace(".", "-")
+        target_url = f"https://www.apkmirror.com/apk/{org}/{cat}/{cat}-{ver_slug}-release/"
+        return target_url
+    except Exception as e:
+        return None
 
-		local arch_text dpi_text
-		arch_text=$($HTMLQ "div.table-cell:nth-child(2)" --text <<<"$node" | xargs)
-		dpi_text=$($HTMLQ "div.table-cell:nth-child(4)" --text <<<"$node" | xargs)
+if mode == "apkmirror_pkg":
+    try:
+        r = session.get(url, timeout=20)
+        m = re.search(r"play\.google\.com/store/apps/details\?id=([\w.]+)", r.text)
+        if m: print(f"PKG:{m.group(1)}")
+    except: sys.exit(1)
 
-		dlurl=$($HTMLQ --base https://www.apkmirror.com --attribute href "div.table-cell:nth-child(1) > a" <<<"$node")
-		
-		if isoneof "$arch_text" "${apparch[@]}"; then
-			if [ -z "$dpi_text" ] || isoneof "$dpi_text" "${appdpi[@]}" || [[ "$dpi_text" =~ [0-9]+-640dpi ]]; then
-				echo "$dlurl"
-				return 0
-			fi
-		fi
-	done
-	return 1
+elif mode == "apkmirror_vers":
+    try:
+        cat = url.rstrip("/").split("/")[-1]
+        r = session.get(f"https://www.apkmirror.com/uploads/?appcategory={cat}", timeout=20)
+        soup = BeautifulSoup(r.text, 'html.parser')
+        vers = []
+        for a in soup.select("#primary a.fontBlack[href*='-release/']"):
+            txt = a.get_text(strip=True)
+            if "beta" not in txt.lower() and "alpha" not in txt.lower():
+                vers.append(txt.split()[-1])
+        print("\n".join(vers))
+    except: sys.exit(1)
+
+elif mode == "apkmirror_dl":
+    try:
+        target_url = get_apkmirror_version_page(url, version)
+        r = session.get(target_url, timeout=20)
+        soup = BeautifulSoup(r.text, 'html.parser')
+        rows = soup.select("div.table-row.headerFont")
+        
+        apparch = {"universal", "noarch", "arm64-v8a + armeabi-v7a", "arm64-v8a + armeabi"}
+        if arch != "all": apparch.add(arch)
+        
+        dl_sub_url = None
+        is_bundle = False
+        
+        for target_type in ["APK", "BUNDLE"]:
+            for row in reversed(rows):
+                badge = row.select_one(".apkm-badge")
+                b_type = badge.get_text(strip=True).upper() if badge else "APK"
+                if b_type != target_type: continue
+                
+                cells = row.select("div.table-cell")
+                if len(cells) < 4: continue
+                arch_text = cells[1].get_text(strip=True)
+                dpi_text = cells[3].get_text(strip=True)
+                
+                dpi_ok = not dpi_text or "nodpi" in dpi_text or "anydpi" in dpi_text or (dpi and dpi in dpi_text)
+                if arch_text in apparch and dpi_ok:
+                    link = row.select_one("div.table-cell:first-child > a")
+                    if link and link.get("href"):
+                        dl_sub_url = "https://www.apkmirror.com" + link["href"]
+                        is_bundle = (target_type == "BUNDLE")
+                        break
+            if dl_sub_url: break
+            
+        if not dl_sub_url: sys.exit(1)
+        
+        soup_dl = BeautifulSoup(session.get(dl_sub_url).text, 'html.parser')
+        btn = soup_dl.select_one("a.btn")
+        btn_url = "https://www.apkmirror.com" + btn["href"]
+        
+        soup_final = BeautifulSoup(session.get(btn_url).text, 'html.parser')
+        dl_link = soup_final.select_one("span > a[rel=nofollow]")
+        final_download_url = "https://www.apkmirror.com" + dl_link["href"]
+        
+        real_dest = dest_path + ".apkm" if is_bundle else dest_path
+        open(real_dest + ".is_bundle", "w").write("true" if is_bundle else "false")
+        
+        r_file = session.get(final_download_url, timeout=300)
+        with open(real_dest, "wb") as f: f.write(r_file.content)
+        print("SUCCESS")
+    except Exception as e:
+        sys.exit(1)
+
+elif mode == "uptodown_pkg":
+    try:
+        r = session.get(f"{url}/download", timeout=20)
+        soup = BeautifulSoup(r.text, 'html.parser')
+        th = soup.find("th", string="Package Name")
+        if th and th.find_next_sibling("td"):
+            print(f"PKG:{th.find_next_sibling('td').get_text(strip=True)}")
+    except: sys.exit(1)
+
+elif mode == "uptodown_vers":
+    try:
+        r = session.get(f"{url}/versions", timeout=20)
+        soup = BeautifulSoup(r.text, 'html.parser')
+        vers = [el.get_text(strip=True) for el in soup.select(".version") if el.get_text(strip=True)]
+        print("\n".join(vers))
+    except: sys.exit(1)
+
+elif mode == "uptodown_dl":
+    try:
+        r = session.get(f"{url}/versions", timeout=20)
+        soup = BeautifulSoup(r.text, 'html.parser')
+        data_code = soup.select_one("#detail-app-name")["data-code"]
+        
+        version_url_data = None
+        is_bundle = False
+        for i in range(1, 21):
+            payload = session.get(f"{url}/apps/{data_code}/versions/{i}").json()
+            data = payload.get("data", [])
+            for entry in data:
+                if entry.get("version") == version:
+                    version_url_data = entry.get("versionURL", {})
+                    is_bundle = (entry.get("kindFile") == "xapk")
+                    break
+            if version_url_data: break
+            
+        ver_url = f"{version_url_data.get('url')}/{version_url_data.get('extraURL')}/{version_url_data.get('versionID')}"
+        soup_ver = BeautifulSoup(session.get(ver_url).text, 'html.parser')
+        btn_variants = soup_ver.select_one(".button.variants")
+        
+        if btn_variants and btn_variants.get("data-version"):
+            base_url = url.rsplit("/", 1)[0]
+            files_payload = session.get(f"{base_url}/app/{data_code}/version/{btn_variants.get('data-version')}/files").json()
+            soup_files = BeautifulSoup(files_payload.get("content", ""), 'html.parser')
+            content = soup_files.select_one(".content")
+            
+            apparch = {"arm64-v8a, armeabi-v7a, x86_64", "arm64-v8a, armeabi-v7a, x86, x86_64", "arm64-v8a, armeabi-v7a"}
+            if arch != "all": apparch.add(arch)
+            
+            node_arch = ""
+            matched_id = None
+            for child in content.children:
+                if not getattr(child, "name", None): continue
+                if "variant" not in child.get("class", []):
+                    node_arch = child.get_text(strip=True)
+                    continue
+                if node_arch in apparch:
+                    file_type_tag = child.select_one(".v-file > span")
+                    is_bundle = file_type_tag.get_text(strip=True) == "xapk" if file_type_tag else False
+                    matched_id = child.select_one(".v-report")["data-file-id"]
+                    break
+            soup_ver = BeautifulSoup(session.get(f"{url}/download/{matched_id}-x").text, 'html.parser')
+            
+        dl_url = soup_ver.select_one("#detail-download-button")["data-url"]
+        real_dest = dest_path + ".apkm" if is_bundle else dest_path
+        open(real_dest + ".is_bundle", "w").write("true" if is_bundle else "false")
+        
+        r_file = session.get(f"https://dw.uptodown.com/dwn/{dl_url}", timeout=300)
+        with open(real_dest, "wb") as f: f.write(r_file.content)
+        print("SUCCESS")
+    except: sys.exit(1)
+EOF
 }
 
-dl_apkmirror() {
-	local url=$1 version=${2// /-} output=$3 arch=$4 dpi=$5 is_bundle=false
+# -------------------- apkmirror wrappers --------------------
+get_apkmirror_resp() {
+	__APKMIRROR_RESP__=$(run_python_scraper "apkmirror_pkg" "$1") || return 1
+	__APKMIRROR_CAT__="${1##*/}"
+}
+get_apkmirror_pkg_name() { grep -oP '^PKG:\K.*' <<<"$__APKMIRROR_RESP__"; }
+get_apkmirror_vers() { run_python_scraper "apkmirror_vers" "https://www.apkmirror.com/apk/google-inc/${__APKMIRROR_CAT__}"; }
 
+dl_apkmirror() {
+	local url=$1 version=$2 output=$3 arch=$4 dpi=$5
 	if [ -f "${output}.apkm" ]; then
 		merge_splits "${output}.apkm" "${output}"
 		return 0
 	fi
-
-	if [ "$arch" = "arm-v7a" ]; then arch="armeabi-v7a"; fi
-	local resp node apkmname dlurl=""
+	rm -f "${output}.is_bundle" "${output}.apkm.is_bundle"
+	run_python_scraper "apkmirror_dl" "$url" "$version" "$output" "$arch" "$dpi" >/dev/null
 	
-	local landing_url="https://www.apkmirror.com/uploads/?appcategory=${__APKMIRROR_CAT__}"
-	req "$landing_url" "$TEMP_DIR/apkm_land.tmp" >/dev/null 2>&1
-	
-	apkmname=$(echo "${url##*/}" | sed 's/-//g')
-	url="https://www.apkmirror.com/apk/google-inc/${__APKMIRROR_CAT__}/${apkmname}-${version//./-}-release/"
-	
-	resp=$(req "$url" -) || return 1
-
-	for type in APK BUNDLE; do
-		if dlurl=$(apkmirror_search "$resp" "$dpi" "$arch" "$type"); then
-			if [ "$type" = "BUNDLE" ]; then is_bundle=true; else is_bundle=false; fi
-			break
-		fi
-	done
-
-	if [ -z "$dlurl" ]; then return 1; fi
-	resp=$(req "$dlurl" -)
-	url=$(echo "$resp" | $HTMLQ --base https://www.apkmirror.com --attribute href "a.btn") || return 1
-	url=$(req "$url" - | $HTMLQ --base https://www.apkmirror.com --attribute href "span > a[rel = nofollow]") || return 1
-
-	if [ "$is_bundle" = true ]; then
-		_req "$url" "${output}.apkm" || return 1
+	if [ -f "${output}.is_bundle" ] && [ "$(cat "${output}.is_bundle")" = "true" ] || [ -f "${output}.apkm.is_bundle" ]; then
 		merge_splits "${output}.apkm" "${output}"
-	else
-		_req "$url" "${output}" || return 1
 	fi
-}
-get_apkmirror_vers() {
-	local vers apkm_resp
-	apkm_resp=$(req "https://www.apkmirror.com/uploads/?appcategory=${__APKMIRROR_CAT__}" -)
-	vers=$(sed -n 's;.*Version:</span><span class="infoSlide-value">\(.*\) </span>.*;\1;p' <<<"$apkm_resp" | awk '{$1=$1}1')
-	if [ "$__AAV__" = false ]; then
-		local IFS=$'\n'
-		vers=$(grep -iv "\(beta\|alpha\)" <<<"$vers")
-		local v r_vers=()
-		for v in $vers; do
-			grep -iq "${v} \(beta\|alpha\)" <<<"$apkm_resp" || r_vers+=("$v")
-		done
-		echo "${r_vers[*]}"
-	else
-		echo "$vers"
-	fi
-}
-get_apkmirror_pkg_name() { sed -n 's;.*id=\(.*\)" class="accent_color.*;\1;p' <<<"$__APKMIRROR_RESP__"; }
-get_apkmirror_resp() {
-	__APKMIRROR_RESP__=$(req "${1}" -) || return 1
-	__APKMIRROR_CAT__="${1##*/}"
+	[ -f "$output" ]
 }
 
-# -------------------- uptodown --------------------
+# -------------------- uptodown wrappers --------------------
 get_uptodown_resp() {
-	__UPTODOWN_RESP__=$(req "${1}/versions" -) || return 1
-	__UPTODOWN_RESP_PKG__=$(req "${1}/download" -) || return 1
+	__UPTODOWN_RESP__=$(run_python_scraper "uptodown_pkg" "$1") || return 1
 }
-get_uptodown_vers() { $HTMLQ --text ".version" <<<"$__UPTODOWN_RESP__"; }
+get_uptodown_pkg_name() { grep -oP '^PKG:\K.*' <<<"$__UPTODOWN_RESP__"; }
+get_uptodown_vers() { run_python_scraper "uptodown_vers" "$1"; }
+
 dl_uptodown() {
-	local uptodown_dlurl=$1 version=$2 output=$3 arch=$4 _dpi=$5
-	if [ "$arch" = "arm-v7a" ]; then arch="armeabi-v7a"; fi
-
-	local apparch=('arm64-v8a, armeabi-v7a, x86_64' 'arm64-v8a, armeabi-v7a, x86, x86_64' 'arm64-v8a, armeabi-v7a')
-	if [ "$arch" != all ]; then apparch+=("$arch"); fi
-
-	local op resp data_code versionURL="" is_bundle=false
-	data_code=$($HTMLQ "#detail-app-name" --attribute data-code <<<"$__UPTODOWN_RESP__")
+	local url=$1 version=$2 output=$3 arch=$4 dpi=$5
+	rm -f "${output}.is_bundle" "${output}.apkm.is_bundle"
+	run_python_scraper "uptodown_dl" "$url" "$version" "$output" "$arch" "$dpi" >/dev/null
 	
-	for i in {1..20}; do
-		resp=$(req "${uptodown_dlurl}/apps/${data_code}/versions/${i}" -)
-		if ! op=$(jq -e -r ".data | map(select(.version == \"${version}\")) | .[0]" <<<"$resp"); then continue; fi
-		if versionURL=$(jq -e -r '.versionURL' <<<"$op"); then 
-			[ "$(jq -e -r ".kindFile" <<<"$op")" = "xapk" ] && is_bundle=true
-			break
-		else return 1; fi
-	done
-	if [ -z "$versionURL" ]; then return 1; fi
-	
-	local v_url v_extra v_id
-	v_url=$(jq -r '.url' <<<"$versionURL")
-	v_extra=$(jq -r '.extraURL' <<<"$versionURL")
-	v_id=$(jq -r '.versionID' <<<"$versionURL")
-	versionURL="${v_url}/${v_extra}/${v_id}"
-	
-	resp=$(req "$versionURL" -) || return 1
-
-	local data_version files data_file_id node_class variant_html file_type
-	data_version=$($HTMLQ '.button.variants' --attribute data-version <<<"$resp") 2>/dev/null || data_version=""
-	
-	if [ -n "$data_version" ]; then
-		local base_domain
-		base_domain=$(echo "$uptodown_dlurl" | sed -E 's|(https://[^/]+).*|\1|')
-		files=$(req "${base_domain}/app/${data_code}/version/${data_version}/files" - | jq -e -r .content) || return 1
-		
-		local matched_variant=""
-		for target_bundle in "false" "true"; do
-			local node_arch=""
-			for ((n = 1; n < 12; n += 1)); do
-				node_class=$($HTMLQ -w -t ".content > :nth-child($n)" --attribute class <<<"$files") 2>/dev/null || continue
-				if [ "$node_class" != "variant" ]; then
-					node_arch=$($HTMLQ -w -t ".content > :nth-child($n)" <<<"$files" | xargs) 2>/dev/null || continue
-					continue
-				fi
-				if [ -z "$node_arch" ] || ! isoneof "$node_arch" "${apparch[@]}"; then continue; fi
-
-				file_type=$($HTMLQ -w -t ".content > :nth-child($n) > .v-file > span" <<<"$files") 2>/dev/null
-				local current_bundle=false
-				[ "$file_type" = "xapk" ] && current_bundle=true
-
-				if [ "$current_bundle" = "$target_bundle" ]; then
-					data_file_id=$($HTMLQ ".content > :nth-child($n) > .v-report" --attribute data-file-id <<<"$files") || return 1
-					is_bundle=$current_bundle
-					matched_variant="${uptodown_dlurl}/download/${data_file_id}-x"
-					break 2
-				fi
-			done
-		done
-
-		if [ -n "$matched_variant" ]; then
-			resp=$(req "$matched_variant" -)
-		else
-			return 1
-		fi
+	if [ -f "${output}.is_bundle" ] && [ "$(cat "${output}.is_bundle")" = "true" ] || [ -f "${output}.apkm.is_bundle" ]; then
+		merge_splits "${output}.apkm" "${output}"
 	fi
-
-	local data_url
-	data_url=$($HTMLQ "#detail-download-button" --attribute data-url <<<"$resp") || return 1
-	_req "https://dw.uptodown.com/dwn/${data_url}" "$output"
+	[ -f "$output" ]
 }
-get_uptodown_pkg_name() { $HTMLQ --text "tr.full:nth-child(1) > td:nth-child(3)" <<<"$__UPTODOWN_RESP_PKG__"; }
 
 # -------------------- archive --------------------
 dl_archive() {
