@@ -5,7 +5,6 @@ CWD=$(pwd)
 TEMP_DIR="temp"
 BIN_DIR="bin"
 BUILD_DIR="build"
-# Added github to the array of download sources
 DL_SRCS=("direct" "github" "archive" "apkmirror" "uptodown")
 
 if [ "${GITHUB_TOKEN-}" ]; then GH_HEADER="Authorization: token ${GITHUB_TOKEN}"; else GH_HEADER=; fi
@@ -223,7 +222,6 @@ _req() {
 			return
 		fi
 	fi
-	# Added --init-cookie / -b/ -c handling alongside an absolute fallback Referer to bypass Cloudflare/403 blocks
 	if ! curl -L \
 		--connect-timeout 10 \
 		--retry 2 \
@@ -240,7 +238,6 @@ _req() {
 }
 
 req() { 
-	# Expanded to include a realistic desktop browser footprint matching modern headers
 	_req "$1" "$2" \
 		-H "User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/119.0" \
 		-H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8" \
@@ -249,6 +246,14 @@ req() {
 		-H "Sec-Fetch-Dest: document" \
 		-H "Sec-Fetch-Mode: navigate" \
 		-H "Sec-Fetch-Site: same-origin"
+}
+
+gh_req() { _req "$1" "$2" -H "$GH_HEADER"; }
+gh_dl() {
+	if [ ! -f "$1" ]; then
+		pr "Getting '$1' from '$2'"
+		_req "$2" "$1" -H "$GH_HEADER" -H "Accept: application/octet-stream"
+	fi
 }
 
 log() { echo -e "$1  " >>"build.md"; }
@@ -364,7 +369,6 @@ apkmirror_search() {
 	local appdpi=("nodpi" "anydpi")
 	if [ "$dpi" ]; then appdpi+=($dpi); fi
 
-	# Matches apkmirror.py parsing approach for standard table blocks
 	for ((n = 1; n < 40; n++)); do
 		node=$($HTMLQ "div.table-row.headerFont:nth-last-child($n)" <<<"$resp")
 		if [ -z "$node" ]; then break; fi
@@ -405,7 +409,6 @@ dl_apkmirror() {
 	url="${url}/${apkmname}-${version//./-}-release/"
 	resp=$(req "$url" -) || return 1
 
-	# Prioritize APK first, then fallback to BUNDLE if not available
 	for type in APK BUNDLE; do
 		if dlurl=$(apkmirror_search "$resp" "$dpi" "$arch" "$type"); then
 			if [ "$type" = "BUNDLE" ]; then is_bundle=true; else is_bundle=false; fi
@@ -480,7 +483,6 @@ dl_uptodown() {
 	if [ "$data_version" ]; then
 		files=$(req "${uptodown_dlurl%/*}/app/${data_code}/version/${data_version}/files" - | jq -e -r .content) || return 1
 		
-		# Prioritization fix: Run double-loop to process standard files (false) before split variants (true)
 		local matched_variant=""
 		for target_bundle in "false" "true"; do
 			local node_arch=""
@@ -580,6 +582,7 @@ get_github_vers() {
 		echo "${versions[@]}" | tr ' ' '\n' | sort -u
 	fi
 }
+
 get_github_pkg_name() {
 	jq -r '.name // .tag_name' <<<"$__GITHUB_RESP__"
 }
@@ -609,7 +612,6 @@ dl_github() {
 		fi
 	done < <(jq -r '.assets[] | \(.name)\t\(.browser_download_url)' <<<"$__GITHUB_RESP__")
 
-	# Prioritize standalone .apk architecture options over bundles
 	for pair in "${matches[@]}"; do
 		local n="${pair%%|*}" u="${pair#*|}"
 		if [[ "$n" =~ -"$arch" ]] && [[ "$n" =~ \.apk$ ]]; then
@@ -932,6 +934,5 @@ author=dj_tanjid | j-hc
 banner=https://raw.githubusercontent.com/dj-tanjid/Morphe-ReVancedX-Builder/teejay/${1}/banner.webp
 description=${4}" >"${6}/module.prop"
 
-	if [ "$ENABLE_MODULE_UPDATE" = true ]; then echo
-	"updateJson=${5}" >>"${6}/module.prop"; fi
+	if [ "$ENABLE_MODULE_UPDATE" = true ]; then echo "updateJson=${5}" >>"${6}/module.prop"; fi
 }
