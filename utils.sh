@@ -350,18 +350,18 @@ run_python_backend() {
 	
 	local p1="${1:-}" p2="${2:-}" p3="${3:-}" p4="${4:-}" p5="${5:-}" p6="${6:-}"
 	
-	python3 - <<EOF
+	python3 - <<'EOF'
 import sys, os, re, json
 from curl_cffi import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
-mode = "$p1"
-url = "$p2"
-version = "$p3"
-dest_path = "$p4"
-arch = "$p5"
-dpi = "$p6"
+mode = sys.argv[1] if len(sys.argv) > 1 else ""
+url = sys.argv[2] if len(sys.argv) > 2 else ""
+version = sys.argv[3] if len(sys.argv) > 3 else ""
+dest_path = sys.argv[4] if len(sys.argv) > 4 else ""
+arch = sys.argv[5] if len(sys.argv) > 5 else ""
+dpi = sys.argv[6] if len(sys.argv) > 6 else ""
 
 session = requests.Session(impersonate="chrome120")
 
@@ -462,7 +462,7 @@ elif mode == "apkmirror_dl":
 
 elif mode == "uptodown_pkg":
     try:
-        r = session.get(f"{url}/download", timeout=20)
+        r = session.get(url, timeout=20)
         soup = BeautifulSoup(r.text, 'html.parser')
         th = soup.find("th", string="Package Name")
         if th and th.find_next_sibling("td"):
@@ -471,7 +471,7 @@ elif mode == "uptodown_pkg":
 
 elif mode == "uptodown_vers":
     try:
-        r = session.get(f"{url}/versions", timeout=20)
+        r = session.get(url, timeout=20)
         soup = BeautifulSoup(r.text, 'html.parser')
         vers = [el.get_text(strip=True) for el in soup.select(".version") if el.get_text(strip=True)]
         print("\n".join(vers))
@@ -479,7 +479,7 @@ elif mode == "uptodown_vers":
 
 elif mode == "uptodown_dl":
     try:
-        r = session.get(f"{url}/versions", timeout=20)
+        r = session.get(url, timeout=20)
         soup = BeautifulSoup(r.text, 'html.parser')
         data_code = soup.select_one("#detail-app-name")["data-code"]
         
@@ -530,7 +530,7 @@ elif mode == "uptodown_dl":
         with open(real_dest, "wb") as f: f.write(r_file.content)
         print("SUCCESS")
     except: sys.exit(1)
-EOF
+EOF "$p1" "$p2" "$p3" "$p4" "$p5" "$p6"
 }
 
 # -------------------- apkmirror wrappers --------------------
