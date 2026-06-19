@@ -5,6 +5,7 @@ CWD=$(pwd)
 TEMP_DIR="temp"
 BIN_DIR="bin"
 BUILD_DIR="build"
+# Added github into supported download stream arrays
 DL_SRCS=("direct" "github" "archive" "apkmirror" "uptodown")
 
 if [ "${GITHUB_TOKEN-}" ]; then GH_HEADER="Authorization: token ${GITHUB_TOKEN}"; else GH_HEADER=; fi
@@ -222,9 +223,7 @@ _req() {
 			return
 		fi
 	fi
-	ip=$(echo "$ip" | xargs)
-
-	if ! curl -L --connect-timeout 20 --retry 3 --retry-delay 4 -b "$TEMP_DIR/cookie.txt" -c "$TEMP_DIR/cookie.txt" --fail -s -S "$@" "$ip" -o "$dlp"; then
+	if ! curl -L -c "$TEMP_DIR/cookie.txt" -b "$TEMP_DIR/cookie.txt" --connect-timeout 10 --retry 1 --fail -s -S "$@" "$ip" -o "$dlp"; then
 		epr "Request failed: $ip"
 		return 1
 	fi
@@ -232,8 +231,7 @@ _req() {
 		mv -f "$dlp" "$op"
 	fi
 }
-
-req() { _req "$1" "$2" -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"; }
+req() { _req "$1" "$2" -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:151.0) Gecko/20100101 Firefox/151.0"; }
 gh_req() { _req "$1" "$2" -H "$GH_HEADER"; }
 gh_dl() {
 	if [ ! -f "$1" ]; then
@@ -344,15 +342,12 @@ merge_splits() {
 	return 0
 }
 
-# ----------------- Unified Python curl_cffi Backend -----------------
-run_python_scraper() {
+# ----------------- Unified Python curl_cffi Scaffold -----------------
+run_python_backend() {
 	python3 -c "import curl_cffi" 2>/dev/null || python3 -m pip install -q curl_cffi bs4
-	
-	# Fixed Unbound Variables: Safely inject positional arguments with fallback defaults
 	local p1="${1:-}" p2="${2:-}" p3="${3:-}" p4="${4:-}" p5="${5:-}" p6="${6:-}"
-	
 	python3 - <<EOF
-import sys, os, re, json
+import sys, os, re
 from curl_cffi import requests
 from bs4 import BeautifulSoup
 
@@ -365,28 +360,26 @@ dpi = "$p6"
 
 session = requests.Session(impersonate="chrome120")
 
-def get_apkmirror_version_page(base_url, ver):
+def extract_apkm_version_url(base_url, ver):
     try:
         r = session.get(base_url, timeout=20)
         soup = BeautifulSoup(r.text, 'html.parser')
-        title_element = soup.select_one("h1.marginZero")
-        title_text = title_element.get_text(strip=True) if title_element else "app"
-        apkmname = re.sub(r'[^a-z0-9-]', '', title_text.lower().replace(" ", "-"))
+        title_el = soup.select_one("h1.marginZero")
+        title_txt = title_el.get_text(strip=True) if title_el else "app"
+        slug = re.sub(r'[^a-z0-9-]', '', title_txt.lower().replace(" ", "-"))
         
         match = re.search(r"apkmirror\.com/apk/([^/]+)/([^/]+)", base_url)
         org = match.group(1) if match else "google-inc"
-        cat = match.group(2) if match else apkmname
+        cat = match.group(2) if match else slug
         
         ver_slug = ver.replace(" ", "-").replace(".", "-")
-        target_url = f"https://www.apkmirror.com/apk/{org}/{cat}/{cat}-{ver_slug}-release/"
-        return target_url
-    except Exception as e:
-        return None
+        return f"https://www.apkmirror.com/apk/{org}/{cat}/{cat}-{ver_slug}-release/"
+    except: return None
 
 if mode == "apkmirror_pkg":
     try:
         r = session.get(url, timeout=20)
-        m = re.search(r"play\.google\.com/store/apps/details\?id=([\w.]+)", r.text)
+        m = re.search(r"play\.google\.com/store/apps/details\?id=([\\w.]+)", r.text)
         if m: print(f"PKG:{m.group(1)}")
     except: sys.exit(1)
 
@@ -405,7 +398,7 @@ elif mode == "apkmirror_vers":
 
 elif mode == "apkmirror_dl":
     try:
-        target_url = get_apkmirror_version_page(url, version)
+        target_url = extract_apkm_version_url(url, version)
         r = session.get(target_url, timeout=20)
         soup = BeautifulSoup(r.text, 'html.parser')
         rows = soup.select("div.table-row.headerFont")
@@ -416,6 +409,7 @@ elif mode == "apkmirror_dl":
         dl_sub_url = None
         is_bundle = False
         
+        # Priority mapping loop: Prioritize APK before falling back to bundle formats
         for target_type in ["APK", "BUNDLE"]:
             for row in reversed(rows):
                 badge = row.select_one(".apkm-badge")
@@ -447,13 +441,12 @@ elif mode == "apkmirror_dl":
         final_download_url = "https://www.apkmirror.com" + dl_link["href"]
         
         real_dest = dest_path + ".apkm" if is_bundle else dest_path
-        open(real_dest + ".is_bundle", "w").write("true" if is_bundle else "false")
+        with open(real_dest + ".is_bundle", "w") as f: f.write("true" if is_bundle else "false")
         
         r_file = session.get(final_download_url, timeout=300)
         with open(real_dest, "wb") as f: f.write(r_file.content)
         print("SUCCESS")
-    except Exception as e:
-        sys.exit(1)
+    except: sys.exit(1)
 
 elif mode == "uptodown_pkg":
     try:
@@ -519,7 +512,7 @@ elif mode == "uptodown_dl":
             
         dl_url = soup_ver.select_one("#detail-download-button")["data-url"]
         real_dest = dest_path + ".apkm" if is_bundle else dest_path
-        open(real_dest + ".is_bundle", "w").write("true" if is_bundle else "false")
+        with open(real_dest + ".is_bundle", "w") as f: f.write("true" if is_bundle else "false")
         
         r_file = session.get(f"https://dw.uptodown.com/dwn/{dl_url}", timeout=300)
         with open(real_dest, "wb") as f: f.write(r_file.content)
@@ -528,13 +521,13 @@ elif mode == "uptodown_dl":
 EOF
 }
 
-# -------------------- apkmirror wrappers --------------------
+# -------------------- apkmirror --------------------
 get_apkmirror_resp() {
-	__APKMIRROR_RESP__=$(run_python_scraper "apkmirror_pkg" "$1") || return 1
+	__APKMIRROR_RESP__=$(run_python_backend "apkmirror_pkg" "$1") || return 1
 	__APKMIRROR_CAT__="${1##*/}"
 }
 get_apkmirror_pkg_name() { grep -oP '^PKG:\K.*' <<<"$__APKMIRROR_RESP__"; }
-get_apkmirror_vers() { run_python_scraper "apkmirror_vers" "https://www.apkmirror.com/apk/google-inc/${__APKMIRROR_CAT__}"; }
+get_apkmirror_vers() { run_python_backend "apkmirror_vers" "$1"; }
 
 dl_apkmirror() {
 	local url=$1 version=$2 output=$3 arch=$4 dpi=$5
@@ -543,7 +536,7 @@ dl_apkmirror() {
 		return 0
 	fi
 	rm -f "${output}.is_bundle" "${output}.apkm.is_bundle"
-	run_python_scraper "apkmirror_dl" "$url" "$version" "$output" "$arch" "$dpi" >/dev/null
+	run_python_backend "apkmirror_dl" "$url" "$version" "$output" "$arch" "$dpi" >/dev/null
 	
 	if [ -f "${output}.is_bundle" ] && [ "$(cat "${output}.is_bundle")" = "true" ] || [ -f "${output}.apkm.is_bundle" ]; then
 		merge_splits "${output}.apkm" "${output}"
@@ -551,17 +544,15 @@ dl_apkmirror() {
 	[ -f "$output" ]
 }
 
-# -------------------- uptodown wrappers --------------------
-get_uptodown_resp() {
-	__UPTODOWN_RESP__=$(run_python_scraper "uptodown_pkg" "$1") || return 1
-}
+# -------------------- uptodown --------------------
+get_uptodown_resp() { __UPTODOWN_RESP__=$(run_python_backend "uptodown_pkg" "$1") || return 1; }
 get_uptodown_pkg_name() { grep -oP '^PKG:\K.*' <<<"$__UPTODOWN_RESP__"; }
-get_uptodown_vers() { run_python_scraper "uptodown_vers" "$1"; }
+get_uptodown_vers() { run_python_backend "uptodown_vers" "$1"; }
 
 dl_uptodown() {
 	local url=$1 version=$2 output=$3 arch=$4 dpi=$5
 	rm -f "${output}.is_bundle" "${output}.apkm.is_bundle"
-	run_python_scraper "uptodown_dl" "$url" "$version" "$output" "$arch" "$dpi" >/dev/null
+	run_python_backend "uptodown_dl" "$url" "$version" "$output" "$arch" "$dpi" >/dev/null
 	
 	if [ -f "${output}.is_bundle" ] && [ "$(cat "${output}.is_bundle")" = "true" ] || [ -f "${output}.apkm.is_bundle" ]; then
 		merge_splits "${output}.apkm" "${output}"
@@ -627,9 +618,7 @@ get_github_vers() {
 		echo "${versions[@]}" | tr ' ' '\n' | sort -u
 	fi
 }
-get_github_pkg_name() {
-	jq -r '.name // .tag_name' <<<"$__GITHUB_RESP__"
-}
+get_github_pkg_name() { jq -r '.name // .tag_name' <<<"$__GITHUB_RESP__"; }
 dl_github() {
 	local url=$1 version=$2 output=$3 arch=$4 dpi=$5 is_bundle=false
 	local version_f asset matches=() target_asset=""
@@ -858,7 +847,7 @@ build_rv() {
 	if [ "${args[patcher_args]}" ]; then p_patcher_args+=("${args[patcher_args]}"); fi
 	for build_mode in "${build_mode_arr[@]}"; do
 		patcher_args=("${p_patcher_args[@]}")
-		pr "Building '${table}' in '$build_mode' mode"
+		pr "running compilation context: building variant block ${table}"
 		if [ -n "$microg_patch" ]; then
 			patched_apk="${TEMP_DIR}/${app_name_l}-${rv_brand_f}-${version_f}-${arch_f}-${build_mode}.apk"
 		else
