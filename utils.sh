@@ -223,13 +223,23 @@ _req() {
 		fi
 	fi
 	
-	# Clean any trailing garbage or spaces out of target IPs
 	ip=$(echo "$ip" | xargs)
 
-	if ! curl -L \
-		--connect-timeout 15 \
+	# Automatically fetch curl-impersonate if it doesn't exist inside the environment
+	local curl_cmd="curl"
+	if [ ! -f "$BIN_DIR/curl_chrome" ] && [ "${OS}" != "Android" ]; then
+		mkdir -p "$BIN_DIR"
+		curl -sL "https://github.com/lwthiker/curl-impersonate/releases/download/v0.6.1/curl-impersonate-v0.6.1.x86_64-linux-gnu.tar.gz" -o "$TEMP_DIR/curl_imp.tar.gz" && \
+		tar -xzf "$TEMP_DIR/curl_imp.tar.gz" -C "$BIN_DIR" curl_chrome 2>/dev/null || true
+	fi
+	if [ -f "$BIN_DIR/curl_chrome" ]; then
+		curl_cmd="$BIN_DIR/curl_chrome"
+	fi
+
+	if ! "$curl_cmd" -L \
+		--connect-timeout 20 \
 		--retry 3 \
-		--retry-delay 3 \
+		--retry-delay 4 \
 		-b "$TEMP_DIR/cookie.txt" \
 		-c "$TEMP_DIR/cookie.txt" \
 		--fail -s -S "$@" "$ip" -o "$dlp"; then
@@ -242,16 +252,18 @@ _req() {
 }
 
 req() { 
-	# Complete dynamic browser emulation layout initialization string
 	_req "$1" "$2" \
-		-H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0" \
-		-H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8" \
-		-H "Accept-Language: en-US,en;q=0.5" \
-		-H "Referer: https://www.apkmirror.com/" \
-		-H "Upgrade-Insecure-Requests: 1" \
+		-H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+		-H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8" \
+		-H "Accept-Language: en-US,en;q=0.9" \
+		-H "Sec-Ch-Ua: \"Chromium\";v=\"124\", \"Google Chrome\";v=\"124\", \"Not-A.Brand\";v=\"99\"" \
+		-H "Sec-Ch-Ua-Mobile: ?0" \
+		-H "Sec-Ch-Ua-Platform: \"Windows\"" \
 		-H "Sec-Fetch-Dest: document" \
 		-H "Sec-Fetch-Mode: navigate" \
-		-H "Sec-Fetch-Site: cross-site"
+		-H "Sec-Fetch-Site: none" \
+		-H "Sec-Fetch-User: ?1" \
+		-H "Upgrade-Insecure-Requests: 1"
 }
 
 gh_req() { _req "$1" "$2" -H "$GH_HEADER"; }
@@ -411,7 +423,6 @@ dl_apkmirror() {
 	if [ "$arch" = "arm-v7a" ]; then arch="armeabi-v7a"; fi
 	local resp node apkmname dlurl=""
 	
-	# Establish dynamic landing session parameters matching appcategory logic blocks
 	local landing_url="https://www.apkmirror.com/uploads/?appcategory=${__APKMIRROR_CAT__}"
 	req "$landing_url" "$TEMP_DIR/apkm_land.tmp" >/dev/null 2>&1
 	
@@ -434,10 +445,10 @@ dl_apkmirror() {
 	url=$(req "$url" - | $HTMLQ --base https://www.apkmirror.com --attribute href "span > a[rel = nofollow]") || return 1
 
 	if [ "$is_bundle" = true ]; then
-		req "$url" "${output}.apkm" || return 1
+		_req "$url" "${output}.apkm" || return 1
 		merge_splits "${output}.apkm" "${output}"
 	else
-		req "$url" "${output}" || return 1
+		_req "$url" "${output}" || return 1
 	fi
 }
 get_apkmirror_vers() {
@@ -488,7 +499,6 @@ dl_uptodown() {
 	done
 	if [ -z "$versionURL" ]; then return 1; fi
 	
-	# Explicit target calculation updates mapping modern download token paths
 	local v_url v_extra v_id
 	v_url=$(jq -r '.url' <<<"$versionURL")
 	v_extra=$(jq -r '.extraURL' <<<"$versionURL")
@@ -538,7 +548,7 @@ dl_uptodown() {
 
 	local data_url
 	data_url=$($HTMLQ "#detail-download-button" --attribute data-url <<<"$resp") || return 1
-	req "https://dw.uptodown.com/dwn/${data_url}" "$output"
+	_req "https://dw.uptodown.com/dwn/${data_url}" "$output"
 }
 get_uptodown_pkg_name() { $HTMLQ --text "tr.full:nth-child(1) > td:nth-child(3)" <<<"$__UPTODOWN_RESP_PKG__"; }
 
@@ -555,7 +565,7 @@ dl_archive() {
 
 	path=$(grep -m1 "${version_f}-${arch// /}" <<<"$__ARCHIVE_RESP__" || grep -m1 "${version_f}" <<<"$__ARCHIVE_RESP__") || return 1
 	if [ "${path##*.}" = "apkm" ]; then output_m="${output}.apkm"; else output_m=$output; fi
-	req "${url}/${path}" "$output_m" || return 1
+	_req "${url}/${path}" "$output_m" || return 1
 	if [ "${path##*.}" = "apkm" ]; then merge_splits "$output_m" "$output"; fi
 }
 get_archive_resp() {
@@ -663,7 +673,7 @@ dl_github() {
 # -------------------- direct --------------------
 dl_direct() {
 	local url=$1 version=${2// /-} output=$3 arch=$4 _dpi=$5
-	req "$url" "${output}" || return 1
+	_req "$url" "${output}" || return 1
 }
 get_direct_vers() { cut -d- -f2 <<<"$__DIRECT_APKNAME__"; }
 get_direct_pkg_name() { cut -d- -f1 <<<"$__DIRECT_APKNAME__"; }
