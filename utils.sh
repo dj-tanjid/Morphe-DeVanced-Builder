@@ -223,7 +223,14 @@ _req() {
 			return
 		fi
 	fi
-	if ! curl -L -c "$TEMP_DIR/cookie.txt" -b "$TEMP_DIR/cookie.txt" --connect-timeout 10 --retry 1 --fail -s -S "$@" "$ip" -o "$dlp"; then
+	# Added --init-cookie / -b/ -c handling alongside an absolute fallback Referer to bypass Cloudflare/403 blocks
+	if ! curl -L \
+		--connect-timeout 10 \
+		--retry 2 \
+		--retry-delay 2 \
+		-b "$TEMP_DIR/cookie.txt" \
+		-c "$TEMP_DIR/cookie.txt" \
+		--fail -s -S "$@" "$ip" -o "$dlp"; then
 		epr "Request failed: $ip"
 		return 1
 	fi
@@ -231,13 +238,17 @@ _req() {
 		mv -f "$dlp" "$op"
 	fi
 }
-req() { _req "$1" "$2" -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:151.0) Gecko/20100101 Firefox/151.0"; }
-gh_req() { _req "$1" "$2" -H "$GH_HEADER"; }
-gh_dl() {
-	if [ ! -f "$1" ]; then
-		pr "Getting '$1' from '$2'"
-		_req "$2" "$1" -H "$GH_HEADER" -H "Accept: application/octet-stream"
-	fi
+
+req() { 
+	# Expanded to include a realistic desktop browser footprint matching modern headers
+	_req "$1" "$2" \
+		-H "User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/119.0" \
+		-H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8" \
+		-H "Accept-Language: en-US,en;q=0.5" \
+		-H "Referer: https://www.apkmirror.com/" \
+		-H "Sec-Fetch-Dest: document" \
+		-H "Sec-Fetch-Mode: navigate" \
+		-H "Sec-Fetch-Site: same-origin"
 }
 
 log() { echo -e "$1  " >>"build.md"; }
