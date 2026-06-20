@@ -348,17 +348,23 @@ merge_splits() {
 run_python_backend() {
 	export PIP_BREAK_SYSTEM_PACKAGES=1
 	if ! python3 -c "import curl_cffi, bs4" 2>/dev/null; then
-		python3 -m pip install -q curl_cffi bs4 urllib3 2>/dev/null || true
+		echo >&2 "[+] Installing curl_cffi and bs4..."
+		python3 -m pip install -q curl_cffi beautifulsoup4 urllib3 --break-system-packages
 	fi
 	
 	python3 - "${1:-}" "${2:-}" "${3:-}" "${4:-}" "${5:-}" "${6:-}" <<'EOF'
-import sys, os, re, json
+import sys, os, re, time
 from urllib.parse import urljoin
+
+def log(msg):
+    sys.stderr.write(f"[Scraper] {msg}\n")
+    sys.stderr.flush()
 
 try:
     from curl_cffi import requests
     from bs4 import BeautifulSoup
-except ImportError:
+except ImportError as e:
+    log(f"Fatal Import Error: {e}")
     if sys.argv[1].endswith("_pkg"):
         print("PKG:UNKNOWN")
         sys.exit(0)
@@ -395,7 +401,6 @@ if mode == "apkmirror_pkg":
             print("PKG:UNKNOWN")
     except:
         print(f"PKG:{resolved_pkg}" if resolved_pkg else "PKG:UNKNOWN")
-        sys.exit(0)
 
 elif mode == "apkmirror_vers":
     try:
@@ -412,35 +417,40 @@ elif mode == "apkmirror_vers":
 
 elif mode == "apkmirror_dl":
     try:
+        log(f"Finding APKMirror release for version {version}...")
         cat = url.rstrip("/").split("/")[-1]
         release_url = None
         
-        # 1. Search search endpoint FIRST (more robust for older versions and non-google apps)
-        ver_normalized = version.replace(".", "-").replace(" ", "-")
-        search_url = f"https://www.apkmirror.com/?post_type=app_release&searchtype=apk&s={cat}+{version}"
-        r = session.get(search_url, timeout=20)
-        soup = BeautifulSoup(r.text, 'html.parser')
-        
-        for a in soup.find_all("a", class_="fontBlack", href=re.compile(r"-release/")):
-            if version in a.get_text():
+        # 1. Search main category feed
+        feed_html = session.get(f"https://www.apkmirror.com/uploads/?appcategory={cat}", timeout=20).text
+        soup_feed = BeautifulSoup(feed_html, 'html.parser')
+        for a in soup_feed.find_all("a", class_="fontBlack", href=re.compile(r"-release/")):
+            text = a.get_text(strip=True)
+            if version in text or text.endswith(version):
                 release_url = urljoin("https://www.apkmirror.com", a["href"])
+                log(f"Found in category feed: {release_url}")
                 break
                 
-        # 2. Fallback to category uploads page
+        # 2. Global Search Fallback
         if not release_url:
-            r = session.get(f"https://www.apkmirror.com/uploads/?appcategory={cat}", timeout=20)
-            soup = BeautifulSoup(r.text, 'html.parser')
-            for a in soup.find_all("a", class_="fontBlack", href=re.compile(r"-release/")):
-                if version in a.get_text():
+            log("Not in feed, trying global search fallback...")
+            search_html = session.get(f"https://www.apkmirror.com/?post_type=app_release&searchtype=apk&s={cat}+{version}", timeout=20).text
+            soup_search = BeautifulSoup(search_html, 'html.parser')
+            for a in soup_search.find_all("a", class_="fontBlack", href=re.compile(r"-release/")):
+                text = a.get_text(strip=True)
+                if version in text or text.endswith(version):
                     release_url = urljoin("https://www.apkmirror.com", a["href"])
+                    log(f"Found via global search: {release_url}")
                     break
-
+                    
         if not release_url:
+            log(f"Version {version} not found on APKMirror.")
             sys.exit(1)
             
-        r2 = session.get(release_url, timeout=20)
-        soup_rel = BeautifulSoup(r2.text, 'html.parser')
+        r_rel = session.get(release_url, timeout=20)
+        soup_rel = BeautifulSoup(r_rel.text, 'html.parser')
         rows = soup_rel.select("div.table-row.headerFont")
+        log(f"Found {len(rows)} variant rows.")
         
         apparch = {"universal", "noarch", "arm64-v8a + armeabi-v7a", "arm64-v8a + armeabi"}
         if arch != "all": apparch.add(arch)
@@ -449,6 +459,7 @@ elif mode == "apkmirror_dl":
         is_bundle = False
         
         for target_type in ["APK", "BUNDLE"]:
+            log(f"Checking for {target_type} variants...")
             for row in reversed(rows):
                 link = row.select_one("div.table-cell:first-child > a")
                 if not link or not link.get("href"): continue
@@ -467,36 +478,46 @@ elif mode == "apkmirror_dl":
                 if arch_text in apparch and dpi_ok:
                     dl_sub_url = urljoin("https://www.apkmirror.com", link["href"])
                     is_bundle = (target_type == "BUNDLE")
+                    log(f"Matched {target_type} variant: Arch={arch_text}, DPI={dpi_text}")
                     break
             if dl_sub_url: break
             
-        if not dl_sub_url: sys.exit(1)
+        if not dl_sub_url:
+            log("No matching variant found.")
+            sys.exit(1)
         
+        log(f"Loading variant page: {dl_sub_url}")
         soup_dl = BeautifulSoup(session.get(dl_sub_url, timeout=20).text, 'html.parser')
-        btn = soup_dl.select_one("a.downloadButton") or soup_dl.select_one("a.btn")
-        if not btn: sys.exit(1)
+        btn = soup_dl.select_one("a.downloadButton") or soup_dl.select_one("a.btn") or soup_dl.select_one("a.accent_bg")
+        if not btn:
+            log("Download button not found on variant page.")
+            sys.exit(1)
+            
         btn_url = urljoin("https://www.apkmirror.com", btn["href"])
+        log(f"Loading final download page: {btn_url}")
         
         soup_final = BeautifulSoup(session.get(btn_url, timeout=20).text, 'html.parser')
-        dl_link = soup_final.select_one("a[data-google-vignette='false'][rel='nofollow']") or soup_final.select_one("span > a[rel=nofollow]")
-        if not dl_link: sys.exit(1)
+        dl_link = soup_final.select_one("a[data-google-vignette='false'][rel='nofollow']") or soup_final.select_one("span > a[rel=nofollow]") or soup_final.find("a", string=re.compile("here", re.I))
+        if not dl_link:
+            log("Final direct link not found.")
+            sys.exit(1)
+            
         final_download_url = urljoin("https://www.apkmirror.com", dl_link["href"])
-        
         real_dest = dest_path + ".apkm" if is_bundle else dest_path
         
-        # Referer header is mandatory to bypass Cloudflare direct link blocks on APKMirror
-        headers = {"Referer": btn_url}
-        r_file = session.get(final_download_url, headers=headers, timeout=300)
+        log(f"Downloading file from: {final_download_url}")
+        r_file = session.get(final_download_url, headers={"Referer": btn_url}, timeout=300)
         
-        # Ensure we actually got a Zip/APK file and not an HTML Cloudflare block page
         if r_file.status_code == 200 and r_file.content.startswith(b"PK"):
             with open(real_dest, "wb") as f: f.write(r_file.content)
-            with open(real_dest + ".is_bundle", "w") as f: f.write("true" if is_bundle else "false")
-            print("SUCCESS")
+            with open(dest_path + ".is_bundle", "w") as f: f.write("true" if is_bundle else "false")
+            log(f"Saved {len(r_file.content)} bytes to {real_dest}")
         else:
+            log(f"Download failed. HTTP {r_file.status_code}. Valid Zip: {r_file.content.startswith(b'PK')}")
             sys.exit(1)
             
     except Exception as e:
+        log(f"Exception: {e}")
         sys.exit(1)
 
 elif mode == "uptodown_pkg":
@@ -522,6 +543,8 @@ elif mode == "uptodown_vers":
 
 elif mode == "uptodown_dl":
     try:
+        import json
+        log(f"Finding Uptodown release for version {version}...")
         r = session.get(f"{url}/versions", timeout=20)
         soup = BeautifulSoup(r.text, 'html.parser')
         data_code = soup.select_one("#detail-app-name")["data-code"]
@@ -568,14 +591,19 @@ elif mode == "uptodown_dl":
         dl_url = soup_ver.select_one("#detail-download-button")["data-url"]
         real_dest = dest_path + ".apkm" if is_bundle else dest_path
         
+        log(f"Downloading file from Uptodown...")
         r_file = session.get(f"https://dw.uptodown.com/dwn/{dl_url}", timeout=300)
+        
         if r_file.status_code == 200 and r_file.content.startswith(b"PK"):
             with open(real_dest, "wb") as f: f.write(r_file.content)
-            with open(real_dest + ".is_bundle", "w") as f: f.write("true" if is_bundle else "false")
-            print("SUCCESS")
+            with open(dest_path + ".is_bundle", "w") as f: f.write("true" if is_bundle else "false")
+            log(f"Saved {len(r_file.content)} bytes to {real_dest}")
         else:
+            log(f"Download failed. HTTP {r_file.status_code}")
             sys.exit(1)
-    except: sys.exit(1)
+    except Exception as e:
+        log(f"Exception: {e}")
+        sys.exit(1)
 EOF
 }
 
@@ -609,11 +637,11 @@ dl_apkmirror() {
 	fi
 	rm -f "${output}.is_bundle" "${output}.apkm.is_bundle"
 	
-	if ! run_python_backend "apkmirror_dl" "$url" "$version" "$output" "$arch" "$dpi" >/dev/null; then
+	if ! run_python_backend "apkmirror_dl" "$url" "$version" "$output" "$arch" "$dpi"; then
 		return 1
 	fi
 	
-	if [ -f "${output}.is_bundle" ] && [ "$(cat "${output}.is_bundle")" = "true" ] || [ -f "${output}.apkm.is_bundle" ]; then
+	if [ -f "${output}.is_bundle" ] && [ "$(cat "${output}.is_bundle")" = "true" ]; then
 		merge_splits "${output}.apkm" "${output}"
 	fi
 	[ -f "$output" ]
@@ -644,11 +672,11 @@ dl_uptodown() {
 	local url="${1%/}" version=$2 output=$3 arch=$4 dpi=$5
 	rm -f "${output}.is_bundle" "${output}.apkm.is_bundle"
 	
-	if ! run_python_backend "uptodown_dl" "$url" "$version" "$output" "$arch" "$dpi" >/dev/null; then
+	if ! run_python_backend "uptodown_dl" "$url" "$version" "$output" "$arch" "$dpi"; then
 		return 1
 	fi
 	
-	if [ -f "${output}.is_bundle" ] && [ "$(cat "${output}.is_bundle")" = "true" ] || [ -f "${output}.apkm.is_bundle" ]; then
+	if [ -f "${output}.is_bundle" ] && [ "$(cat "${output}.is_bundle")" = "true" ]; then
 		merge_splits "${output}.apkm" "${output}"
 	fi
 	[ -f "$output" ]
