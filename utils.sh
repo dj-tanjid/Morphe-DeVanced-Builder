@@ -345,7 +345,7 @@ merge_splits() {
 }
 
 # ----------------- Pure Python Independent Engine -----------------
-# Includes advanced Referer Threading and Delay to prevent Cloudflare Blocks
+# Includes Cookie Persistence & Advanced Referer Threading to destroy CF Blocks
 setup_python_backend() {
 	mkdir -p "$TEMP_DIR"
 	if [ ! -f "$TEMP_DIR/network_engine.py" ]; then
@@ -369,26 +369,50 @@ except ImportError as e:
         sys.exit(0)
     sys.exit(1)
 
+# Persistent State Files to prevent "Process Amnesia" between Bash steps
+COOKIE_JAR = "/tmp/apkmirror_cookies.json"
+BROWSER_CFG = "/tmp/apkmirror_browser.txt"
+
 class Scraper:
     def __init__(self):
         self.session = None
+        self.current_browser = "chrome120"
+        
+    def save_state(self):
+        if self.session and self.current_browser:
+            try:
+                with open(BROWSER_CFG, "w") as f: f.write(self.current_browser)
+                with open(COOKIE_JAR, "w") as f: json.dump(self.session.cookies.get_dict(), f)
+            except: pass
+
+    def load_state(self):
+        try:
+            if os.path.exists(BROWSER_CFG) and os.path.exists(COOKIE_JAR):
+                with open(BROWSER_CFG, "r") as f: self.current_browser = f.read().strip()
+                self.session = requests.Session(impersonate=self.current_browser)
+                with open(COOKIE_JAR, "r") as f:
+                    for k, v in json.load(f).items():
+                        self.session.cookies.set(k, v)
+                return True
+        except: pass
+        return False
 
     def get_soup(self, url, referer="https://www.apkmirror.com/"):
         headers = {"Referer": referer, "Accept-Language": "en-US,en;q=0.9"}
-        
-        # HUMANIZED DELAY: Core natural delay to prevent 429 Too Many Requests CF triggers
         time.sleep(random.uniform(2.5, 4.5))
         
-        if self.session:
+        # Fast path: Try using the persistent session from the last bash command
+        if self.load_state() or self.session:
             try:
                 r = self.session.get(url, headers=headers, timeout=20, allow_redirects=True)
                 if r.status_code < 400 and "cf-browser-verification" not in r.text and "Just a moment" not in r.text:
+                    self.save_state()
                     return BeautifulSoup(r.text, 'html.parser'), r
             except Exception as e:
-                log(f"Session request failed: {e}")
+                pass
 
-        # Priority browsers with highest Cloudflare bypass rates right now
-        browsers = ["chrome110", "chrome120", "safari15_5", "chrome124", "edge99"]
+        # Fallback path: Rotate browsers to secure a new Cloudflare clearance
+        browsers = ["chrome124", "safari15_5", "chrome120", "edge99", "chrome110"]
         for browser in browsers:
             try:
                 time.sleep(random.uniform(1.5, 3.0))
@@ -400,6 +424,8 @@ class Scraper:
                     continue
                     
                 self.session = new_session
+                self.current_browser = browser
+                self.save_state()
                 return BeautifulSoup(r.text, 'html.parser'), r
             except Exception as e:
                 log(f"Error impersonating {browser}: {e}")
