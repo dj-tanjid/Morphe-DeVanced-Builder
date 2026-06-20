@@ -7,7 +7,7 @@ source utils.sh
 
 # --- Global Environment Export Setup for Asynchronous Background Tasks ---
 # Explicitly registers the key functions to be carried inside subshell spaces
-for func_name in _req req gh_req gh_dl build_rv patches_list patches_list_versions toml_get toml_get_table toml_get_table_names toml_get_table_main dl_direct dl_github dl_archive dl_apkmirror dl_uptodown get_direct_vers get_github_vers get_archive_vers get_apkmirror_vers get_uptodown_vers get_direct_pkg_name get_github_pkg_name get_archive_pkg_name get_apkmirror_pkg_name get_uptodown_pkg_name get_direct_resp get_github_resp get_archive_resp get_apkmirror_resp get_uptodown_resp apkmirror_search merge_splits check_sig patch_apk isoneof log get_highest_ver semver_validate get_patch_last_supported_ver list_args join_args module_config module_prop abort epr wpr pr java; do
+for func_name in _req req gh_req gh_dl build_rv patches_list patches_list_versions toml_get toml_get_table toml_get_table_names toml_get_table_main dl_direct dl_github dl_archive dl_apkmirror dl_uptodown get_direct_vers get_github_vers get_archive_vers get_apkmirror_vers get_uptodown_vers get_direct_pkg_name get_github_pkg_name get_archive_pkg_name get_apkmirror_pkg_name get_uptodown_pkg_name get_direct_resp get_github_resp get_archive_resp get_apkmirror_resp get_uptodown_resp apkmirror_search merge_splits check_sig patch_apk isoneof log get_highest_ver semver_validate get_patch_last_supported_ver list_args join_args module_config module_prop abort epr wpr pr java run_python_backend; do
     export -f "$func_name" 2>/dev/null || true
 done
 # Export core operational paths variables 
@@ -26,7 +26,6 @@ java --version >/dev/null || abort "\`openjdk 17\` is not installed. install it 
 zip --version >/dev/null || abort "\`zip\` is not installed. install it with 'apt install zip' or equivalent"
 
 set_prebuilts
-setup_python_env   # <--- Add this line!
 
 vtf() { if ! isoneof "${1}" "true" "false"; then abort "ERROR: '${1}' is not a valid option for '${2}': only true or false is allowed"; fi; }
 
