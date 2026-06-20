@@ -1,5 +1,4 @@
-Google-Photos-ReVanced: 7.81.0.932521513  
-Reddit-Morphe: 2026.24.0  
+YT-Music-Morphe: 9.24.51  
 YouTube-Morphe: 21.24.366  
 
 - Install [ReVanced GmsCore](https://github.com/ReVanced/GmsCore/releases/latest) or [Morphe MicroG-RE](https://github.com/MorpheApp/MicroG-RE/releases/latest) for non-root YouTube, YT Music and Google Photos APKs.  
@@ -7,9 +6,6 @@ YouTube-Morphe: 21.24.366
 - (Optional) Import my [**Custom Settings**](../teejay/custom_settings-by_tanjid) into your application. [*How to do this?*](../teejay/?tab=readme-ov-file#import-custom-settings-in-revancedmorphe-applications)  
 
 Patches and CLI Sources :  
-Patches: MorpheApp/patches-1.32.0-dev.4.mpp  
-[Changelog](https://github.com/MorpheApp/morphe-patches/releases/tag/v1.32.0-dev.4)
-
 CLI: MorpheApp/morphe-cli-1.9.1-all.jar  
-Patches: RookieEnough/patches-1.0.4.mpp  
-[Changelog](https://github.com/RookieEnough/De-Vanced/releases/tag/v1.0.4)  
+Patches: MorpheApp/patches-1.32.0-dev.4.mpp  
+[Changelog](https://github.com/MorpheApp/morphe-patches/releases/tag/v1.32.0-dev.4)  
