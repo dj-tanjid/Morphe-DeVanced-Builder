@@ -371,7 +371,10 @@ dest_path = sys.argv[4] if len(sys.argv) > 4 else ""
 arch = sys.argv[5] if len(sys.argv) > 5 else ""
 dpi = sys.argv[6] if len(sys.argv) > 6 else ""
 
-session = requests.Session(impersonate="chrome120")
+if arch == "arm-v7a":
+    arch = "armeabi-v7a"
+
+session = requests.Session(impersonate="chrome110")
 
 if mode == "apkmirror_pkg":
     resolved_pkg = None
@@ -409,30 +412,25 @@ elif mode == "apkmirror_vers":
 
 elif mode == "apkmirror_dl":
     try:
-        m_url = re.search(r"apkmirror\.com/apk/([^/]+)/([^/]+)", url)
-        if not m_url: sys.exit(1)
-        org, cat = m_url.group(1), m_url.group(2)
+        cat = url.rstrip("/").split("/")[-1]
+        release_url = None
         
-        ver_slug = version.replace(".", "-").replace(" ", "-")
-        release_url = f"https://www.apkmirror.com/apk/{org}/{cat}/{cat}-{ver_slug}-release/"
-        
-        r = session.get(release_url, timeout=20)
-        if r.status_code == 404:
-            # Fallback scan of the uploads page
-            feed_html = session.get(f"https://www.apkmirror.com/uploads/?appcategory={cat}", timeout=20).text
-            soup_feed = BeautifulSoup(feed_html, 'html.parser')
-            found_url = None
-            for a in soup_feed.find_all("a", href=re.compile(r"-release/")):
-                if version in a.get_text():
-                    found_url = urljoin("https://www.apkmirror.com", a["href"])
-                    break
-            if found_url:
-                r = session.get(found_url, timeout=20)
-            else:
-                sys.exit(1)
-
+        # Exact extraction matching your apkmirror.py proven method
+        r = session.get(f"https://www.apkmirror.com/uploads/?appcategory={cat}", timeout=20)
         soup = BeautifulSoup(r.text, 'html.parser')
-        rows = soup.select("div.table-row.headerFont")
+        
+        for a in soup.select("#primary a.fontBlack[href*='-release/']"):
+            text = a.get_text(strip=True)
+            if version in text or text.split()[-1] == version:
+                release_url = urljoin("https://www.apkmirror.com", a["href"])
+                break
+                
+        if not release_url:
+            sys.exit(1)
+            
+        r2 = session.get(release_url, timeout=20)
+        soup_rel = BeautifulSoup(r2.text, 'html.parser')
+        rows = soup_rel.select("div.table-row.headerFont")
         
         apparch = {"universal", "noarch", "arm64-v8a + armeabi-v7a", "arm64-v8a + armeabi"}
         if arch != "all": apparch.add(arch)
@@ -464,13 +462,13 @@ elif mode == "apkmirror_dl":
             
         if not dl_sub_url: sys.exit(1)
         
-        soup_dl = BeautifulSoup(session.get(dl_sub_url).text, 'html.parser')
-        btn = soup_dl.select_one("a.btn")
+        soup_dl = BeautifulSoup(session.get(dl_sub_url, timeout=20).text, 'html.parser')
+        btn = soup_dl.select_one("a.downloadButton") or soup_dl.select_one("a.btn")
         if not btn: sys.exit(1)
         btn_url = urljoin("https://www.apkmirror.com", btn["href"])
         
-        soup_final = BeautifulSoup(session.get(btn_url).text, 'html.parser')
-        dl_link = soup_final.select_one("span > a[rel=nofollow]") or soup_final.select_one("a[data-google-vignette='false'][rel='nofollow']")
+        soup_final = BeautifulSoup(session.get(btn_url, timeout=20).text, 'html.parser')
+        dl_link = soup_final.select_one("a[data-google-vignette='false'][rel='nofollow']") or soup_final.select_one("span > a[rel=nofollow]")
         if not dl_link: sys.exit(1)
         final_download_url = urljoin("https://www.apkmirror.com", dl_link["href"])
         
@@ -478,8 +476,11 @@ elif mode == "apkmirror_dl":
         with open(real_dest + ".is_bundle", "w") as f: f.write("true" if is_bundle else "false")
         
         r_file = session.get(final_download_url, timeout=300)
-        with open(real_dest, "wb") as f: f.write(r_file.content)
-        print("SUCCESS")
+        if r_file.status_code == 200:
+            with open(real_dest, "wb") as f: f.write(r_file.content)
+            print("SUCCESS")
+        else:
+            sys.exit(1)
     except Exception as e:
         sys.exit(1)
 
