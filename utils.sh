@@ -352,7 +352,7 @@ setup_python_backend() {
 		export PIP_BREAK_SYSTEM_PACKAGES=1
 		python3 -m pip install -q "curl_cffi>=0.7.0" beautifulsoup4 urllib3 2>/dev/null || true
 		cat << 'EOF' > "$TEMP_DIR/network_engine.py"
-import sys, os, re, time, json
+import sys, os, re, time, json, random
 from urllib.parse import urljoin
 
 def log(msg):
@@ -376,31 +376,33 @@ class Scraper:
     def get_soup(self, url, referer="https://www.apkmirror.com/"):
         headers = {"Referer": referer, "Accept-Language": "en-US,en;q=0.9"}
         
-        # Core natural delay to prevent 429 Too Many Requests CF triggers
-        time.sleep(1.5)
+        # HUMANIZED DELAY: Core natural delay to prevent 429 Too Many Requests CF triggers
+        time.sleep(random.uniform(2.5, 4.5))
         
         if self.session:
             try:
                 r = self.session.get(url, headers=headers, timeout=20, allow_redirects=True)
                 if r.status_code < 400 and "cf-browser-verification" not in r.text and "Just a moment" not in r.text:
                     return BeautifulSoup(r.text, 'html.parser'), r
-            except:
-                pass
+            except Exception as e:
+                log(f"Session request failed: {e}")
 
-        # Priority browsers with highest Cloudflare bypass rates
-        browsers = ["chrome120", "chrome124", "safari15_5", "edge99"]
+        # Priority browsers with highest Cloudflare bypass rates right now
+        browsers = ["chrome110", "chrome120", "safari15_5", "chrome124", "edge99"]
         for browser in browsers:
             try:
-                time.sleep(1)
+                time.sleep(random.uniform(1.5, 3.0))
                 new_session = requests.Session(impersonate=browser)
                 r = new_session.get(url, headers=headers, timeout=20, allow_redirects=True)
                 
                 if r.status_code in (403, 503) or "Just a moment" in r.text or "cf-browser-verification" in r.text:
+                    log(f"Cloudflare block on {browser}")
                     continue
                     
                 self.session = new_session
                 return BeautifulSoup(r.text, 'html.parser'), r
             except Exception as e:
+                log(f"Error impersonating {browser}: {e}")
                 time.sleep(1)
                 
         log("All browsers failed Cloudflare checks.")
@@ -459,12 +461,13 @@ def main():
         cat = url.rstrip("/").split("/")[-1]
         log(f"Searching APKMirror for version {version} ({cat})")
         
-        # SMART SEARCH: Strip out everything except base numbers for aggressive APKMirror indexing support
         search_term = version.split("-")[0].strip()
         search_url = f"https://www.apkmirror.com/?post_type=app_release&searchtype=apk&s={cat}+{search_term}"
         
         soup_search, _ = scraper.get_soup(search_url)
-        if not soup_search: sys.exit(1)
+        if not soup_search: 
+            log("Search page failed to load.")
+            sys.exit(1)
         
         release_url = None
         ver_slug = version.replace(".", "-").replace(" ", "-")
@@ -487,8 +490,10 @@ def main():
             sys.exit(1)
             
         soup_rel, r_rel = scraper.get_soup(release_url, referer=search_url)
-        if not r_rel: sys.exit(1)
-        
+        if not soup_rel:
+            log("Release page failed to load.")
+            sys.exit(1)
+            
         rows = [r for r in soup_rel.select("div.table-row") if len(r.select("div.table-cell")) >= 4]
         log(f"Found {len(rows)} variant rows.")
         
@@ -524,6 +529,10 @@ def main():
             sys.exit(1)
             
         soup_dl, _ = scraper.get_soup(dl_sub_url, referer=release_url)
+        if not soup_dl:
+            log("Variant page failed to load.")
+            sys.exit(1)
+            
         btn = soup_dl.select_one("a.downloadButton") or soup_dl.select_one("a.btn") or soup_dl.find("a", class_=re.compile("download"))
         if not btn:
             log("Download button not found on variant page.")
@@ -531,10 +540,13 @@ def main():
             
         btn_url = urljoin("https://www.apkmirror.com", btn["href"])
         soup_final, _ = scraper.get_soup(btn_url, referer=dl_sub_url)
-        
+        if not soup_final:
+            log("Final redirect page failed to load.")
+            sys.exit(1)
+            
         dl_link = soup_final.select_one("a[data-google-vignette='false'][rel='nofollow']") or soup_final.select_one("span > a[rel=nofollow]") or soup_final.find("a", string=re.compile("here", re.I))
         if not dl_link:
-            log("Final direct link not found.")
+            log("Final direct link not found on redirect page.")
             sys.exit(1)
             
         final_download_url = urljoin("https://www.apkmirror.com", dl_link["href"])
@@ -542,11 +554,12 @@ def main():
 
     elif mode == "uptodown_pkg":
         soup, _ = scraper.get_soup(f"{url}/download")
-        th = soup.find("th", string="Package Name")
-        if th and th.find_next_sibling("td"):
-            print(f"PKG:{th.find_next_sibling('td').get_text(strip=True)}")
-        else:
-            print("PKG:UNKNOWN")
+        if soup:
+            th = soup.find("th", string="Package Name")
+            if th and th.find_next_sibling("td"):
+                print(f"PKG:{th.find_next_sibling('td').get_text(strip=True)}")
+                return
+        print("PKG:UNKNOWN")
 
     elif mode == "uptodown_vers":
         soup, _ = scraper.get_soup(f"{url}/versions")
@@ -559,6 +572,8 @@ def main():
         if arch == "arm-v7a": arch = "armeabi-v7a"
         
         soup, _ = scraper.get_soup(f"{url}/versions")
+        if not soup: sys.exit(1)
+        
         data_code = soup.select_one("#detail-app-name")["data-code"]
         
         ver_url_data = None
@@ -580,6 +595,8 @@ def main():
 
         ver_url = f"{ver_url_data.get('url', '')}/{ver_url_data.get('extraURL', '')}/{ver_url_data.get('versionID', '')}"
         soup_ver, _ = scraper.get_soup(ver_url)
+        if not soup_ver: sys.exit(1)
+        
         btn_variants = soup_ver.select_one(".button.variants")
 
         if btn_variants and (data_version := btn_variants.get("data-version")):
