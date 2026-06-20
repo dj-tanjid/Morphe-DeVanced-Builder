@@ -345,7 +345,7 @@ merge_splits() {
 }
 
 # ----------------- Pure Python Independent Engine -----------------
-# Includes Cookie Persistence & Advanced Referer Threading to destroy CF Blocks
+# Engineered to randomize TLS fingerprints and heavily backoff CF challenges
 setup_python_backend() {
 	mkdir -p "$TEMP_DIR"
 	if [ ! -f "$TEMP_DIR/network_engine.py" ]; then
@@ -369,7 +369,6 @@ except ImportError as e:
         sys.exit(0)
     sys.exit(1)
 
-# Persistent State Files to prevent "Process Amnesia" between Bash steps
 COOKIE_JAR = "/tmp/apkmirror_cookies.json"
 BROWSER_CFG = "/tmp/apkmirror_browser.txt"
 
@@ -397,11 +396,19 @@ class Scraper:
         except: pass
         return False
 
-    def get_soup(self, url, referer="https://www.apkmirror.com/"):
-        headers = {"Referer": referer, "Accept-Language": "en-US,en;q=0.9"}
-        time.sleep(random.uniform(2.5, 4.5))
+    def clear_state(self):
+        try:
+            if os.path.exists(BROWSER_CFG): os.remove(BROWSER_CFG)
+            if os.path.exists(COOKIE_JAR): os.remove(COOKIE_JAR)
+        except: pass
+
+    def get_soup(self, url, referer=None):
+        # We do NOT pass Accept-Language manually to let curl_cffi strictly spoof the browser
+        headers = {"Referer": referer} if referer else {}
         
-        # Fast path: Try using the persistent session from the last bash command
+        # Heavy natural delay to prevent IP rate-limiting
+        time.sleep(random.uniform(2.0, 4.0))
+        
         if self.load_state() or self.session:
             try:
                 r = self.session.get(url, headers=headers, timeout=20, allow_redirects=True)
@@ -411,11 +418,15 @@ class Scraper:
             except Exception as e:
                 pass
 
-        # Fallback path: Rotate browsers to secure a new Cloudflare clearance
-        browsers = ["chrome124", "safari15_5", "chrome120", "edge99", "chrome110"]
+        # If blocked, clear cookies and randomize browser identity to escape the ban
+        self.clear_state()
+        browsers = ["chrome124", "chrome120", "edge99", "safari15_5", "chrome116", "chrome110"]
+        random.shuffle(browsers)
+        
         for browser in browsers:
             try:
-                time.sleep(random.uniform(1.5, 3.0))
+                # Heavy backoff between browser rotation
+                time.sleep(random.uniform(3.5, 6.0))
                 new_session = requests.Session(impersonate=browser)
                 r = new_session.get(url, headers=headers, timeout=20, allow_redirects=True)
                 
@@ -428,7 +439,6 @@ class Scraper:
                 self.save_state()
                 return BeautifulSoup(r.text, 'html.parser'), r
             except Exception as e:
-                log(f"Error impersonating {browser}: {e}")
                 time.sleep(1)
                 
         log("All browsers failed Cloudflare checks.")
