@@ -18,7 +18,7 @@ This ReVanced/Morphe builder creates both APKs and [Magisk](https://github.com/t
  <li> Can build root Modules and non-root APKs</li>
  <li> Updated daily with the latest versions of apps and patches</li>
  <li> Optimizes APKs and modules for size</li>
- <li> Can download optimized APKs to patch from sources such as APKMirror, Uptodown, Archive & Github [*Archive and Github not tested but feature is present*]</li>
+ <li> Can download optimized APKs to patch from sources such as APKMirror, Uptodown, Archive & Github [Archive and Github not tested but feature is present]</li>
  <li> Modules</li>
     <ul>
      <li> recompile invalidated odex for faster usage</li>
