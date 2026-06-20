@@ -344,221 +344,263 @@ merge_splits() {
 	return 0
 }
 
-# ----------------- Unified Python curl_cffi Backend -----------------
-run_python_backend() {
-	export PIP_BREAK_SYSTEM_PACKAGES=1
-	if ! python3 -c "import curl_cffi, bs4" 2>/dev/null; then
-		python3 -m pip install -q curl_cffi bs4 urllib3 2>/dev/null || true
-	fi
-	
-	python3 - "${1:-}" "${2:-}" "${3:-}" "${4:-}" "${5:-}" "${6:-}" <<'EOF'
-import sys, os, re, json
-from urllib.parse import urljoin
+# ----------------- Unified Python Backend Setup -----------------
+setup_python_backend() {
+	mkdir -p "$TEMP_DIR"
+	if [ ! -f "$TEMP_DIR/net_scraper.py" ]; then
+		cat << 'EOF' > "$TEMP_DIR/net_scraper.py"
+import sys, os, re, time, json
+from pathlib import Path
+from urllib.parse import urlparse, urljoin
+
+def epr(msg):
+    print(msg, file=sys.stderr)
 
 try:
     from curl_cffi import requests
     from bs4 import BeautifulSoup
 except ImportError:
-    if sys.argv[1].endswith("_pkg"):
-        print("PKG:UNKNOWN")
-        sys.exit(0)
-    sys.exit(1)
+    import subprocess
+    os.environ["PIP_BREAK_SYSTEM_PACKAGES"] = "1"
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "--break-system-packages", "-q", "curl_cffi", "beautifulsoup4"])
+    from curl_cffi import requests
+    from bs4 import BeautifulSoup
 
-mode = sys.argv[1] if len(sys.argv) > 1 else ""
-url = sys.argv[2] if len(sys.argv) > 2 else ""
-version = sys.argv[3] if len(sys.argv) > 3 else ""
-dest_path = sys.argv[4] if len(sys.argv) > 4 else ""
-arch = sys.argv[5] if len(sys.argv) > 5 else ""
-dpi = sys.argv[6] if len(sys.argv) > 6 else ""
+class NetworkManager:
+    def __init__(self):
+        self.session = requests.Session(impersonate="chrome120")
+        token = os.getenv("GITHUB_TOKEN")
+        self.headers = {"Authorization": f"token {token}"} if token else {}
 
-if arch == "arm-v7a":
-    arch = "armeabi-v7a"
+    def get(self, url, timeout=20):
+        for attempt in range(3):
+            try:
+                time.sleep(0.5)
+                resp = self.session.get(url, timeout=timeout, allow_redirects=True, headers=self.headers)
+                if resp.status_code == 404:
+                    raise Exception(f"404 Not Found: {url}")
+                if resp.status_code >= 400:
+                    epr(f"HTTP {resp.status_code} for {url}")
+                    time.sleep(2)
+                    continue
+                return resp.text
+            except Exception as e:
+                epr(f"Request error: {e}")
+                time.sleep(2)
+        raise Exception(f"Failed to fetch {url}")
 
-session = requests.Session(impersonate="chrome110")
+    def download(self, url, dest_path):
+        for attempt in range(3):
+            try:
+                time.sleep(0.5)
+                resp = self.session.get(url, timeout=300, stream=True, allow_redirects=True, headers=self.headers)
+                if resp.status_code >= 400:
+                    continue
+                with open(dest_path, "wb") as f:
+                    f.write(resp.content)
+                return
+            except Exception as e:
+                epr(f"Download error: {e}")
+                time.sleep(2)
+        raise Exception(f"Failed to download {url}")
 
-if mode == "apkmirror_pkg":
-    resolved_pkg = None
-    if "youtube-music" in url: resolved_pkg = "com.google.android.apps.youtube.music"
-    elif "youtube" in url: resolved_pkg = "com.google.android.youtube"
-    elif "photos" in url: resolved_pkg = "com.google.android.apps.photos"
-    elif "reddit" in url: resolved_pkg = "com.reddit.frontpage"
-    elif "twitter" in url: resolved_pkg = "com.twitter.android"
+def parse_html(html):
+    return BeautifulSoup(html, "html.parser")
 
-    try:
-        r = session.get(url, timeout=20)
-        m = re.search(r"play\.google\.com/store/apps/details\?id=([\w.]+)", r.text)
-        if m: 
+try:
+    net = NetworkManager()
+    mode = sys.argv[1]
+
+    if mode == "apkmirror_pkg":
+        url = sys.argv[2]
+        html = net.get(url)
+        m = re.search(r"play\.google\.com/store/apps/details\?id=([\w.]+)", html)
+        if m:
             print(f"PKG:{m.group(1)}")
-        elif resolved_pkg:
-            print(f"PKG:{resolved_pkg}")
         else:
-            print("PKG:UNKNOWN")
-    except:
-        print(f"PKG:{resolved_pkg}" if resolved_pkg else "PKG:UNKNOWN")
-        sys.exit(0)
+            cat = url.rstrip("/").split("/")[-1]
+            fallbacks = {
+                "youtube-music": "com.google.android.apps.youtube.music",
+                "youtube": "com.google.android.youtube",
+                "photos": "com.google.android.apps.photos",
+                "reddit": "com.reddit.frontpage",
+                "twitter": "com.twitter.android"
+            }
+            pkg = fallbacks.get(cat, "UNKNOWN")
+            print(f"PKG:{pkg}")
 
-elif mode == "apkmirror_vers":
-    try:
+    elif mode == "apkmirror_vers":
+        url = sys.argv[2]
         cat = url.rstrip("/").split("/")[-1]
-        r = session.get(f"https://www.apkmirror.com/uploads/?appcategory={cat}", timeout=20)
-        soup = BeautifulSoup(r.text, 'html.parser')
-        vers = []
+        html = net.get(f"https://www.apkmirror.com/uploads/?appcategory={cat}")
+        soup = parse_html(html)
         for a in soup.select("#primary a.fontBlack[href*='-release/']"):
-            text = a.get_text(strip=True)
-            if "beta" not in text.lower() and "alpha" not in text.lower():
-                vers.append(text.split()[-1])
-        print("\n".join(vers))
-    except: sys.exit(1)
+            txt = a.get_text(strip=True)
+            if "beta" not in txt.lower() and "alpha" not in txt.lower():
+                print(txt.split()[-1])
 
-elif mode == "apkmirror_dl":
-    try:
+    elif mode == "apkmirror_dl":
+        url, version, dest, arch, dpi = sys.argv[2:7]
+        if arch == "arm-v7a": arch = "armeabi-v7a"
         cat = url.rstrip("/").split("/")[-1]
         release_url = None
-        
-        # Exact extraction matching your apkmirror.py proven method
-        r = session.get(f"https://www.apkmirror.com/uploads/?appcategory={cat}", timeout=20)
-        soup = BeautifulSoup(r.text, 'html.parser')
-        
-        for a in soup.select("#primary a.fontBlack[href*='-release/']"):
-            text = a.get_text(strip=True)
-            if version in text or text.split()[-1] == version:
+
+        search_html = net.get(f"{url.rstrip('/')}/?s={version}")
+        soup = parse_html(search_html)
+        for a in soup.select("a.fontBlack[href*='-release/']"):
+            if version in a.get_text() and f"/{cat}/" in a.get("href", ""):
                 release_url = urljoin("https://www.apkmirror.com", a["href"])
                 break
-                
+
         if not release_url:
-            sys.exit(1)
-            
-        r2 = session.get(release_url, timeout=20)
-        soup_rel = BeautifulSoup(r2.text, 'html.parser')
+            upl_html = net.get(f"https://www.apkmirror.com/uploads/?appcategory={cat}")
+            soup_upl = parse_html(upl_html)
+            for a in soup_upl.select("a.fontBlack[href*='-release/']"):
+                if version in a.get_text() or a.get_text(strip=True).split()[-1] == version:
+                    release_url = urljoin("https://www.apkmirror.com", a["href"])
+                    break
+
+        if not release_url:
+            raise Exception(f"Version {version} not found on APKMirror")
+
+        release_html = net.get(release_url)
+        soup_rel = parse_html(release_html)
         rows = soup_rel.select("div.table-row.headerFont")
         
         apparch = {"universal", "noarch", "arm64-v8a + armeabi-v7a", "arm64-v8a + armeabi"}
         if arch != "all": apparch.add(arch)
-        
-        dl_sub_url = None
+
+        dl_url = None
         is_bundle = False
-        
-        for target_type in ["APK", "BUNDLE"]:
+
+        for bt in ("APK", "BUNDLE"):
             for row in reversed(rows):
                 link = row.select_one("div.table-cell:first-child > a")
                 if not link or not link.get("href"): continue
-                
+
                 cells = row.select("div.table-cell")
                 if len(cells) < 4: continue
-                
+
                 badge = cells[0].select_one(".apkm-badge")
                 b_type = badge.get_text(strip=True).upper() if badge else "APK"
-                if b_type != target_type: continue
-                
+                if b_type != bt: continue
+
                 arch_text = cells[1].get_text(strip=True)
                 dpi_text = cells[3].get_text(strip=True)
-                
-                dpi_ok = not dpi_text or "nodpi" in dpi_text or "anydpi" in dpi_text or (dpi and dpi in dpi_text)
-                if arch_text in apparch and dpi_ok:
-                    dl_sub_url = urljoin("https://www.apkmirror.com", link["href"])
-                    is_bundle = (target_type == "BUNDLE")
-                    break
-            if dl_sub_url: break
-            
-        if not dl_sub_url: sys.exit(1)
-        
-        soup_dl = BeautifulSoup(session.get(dl_sub_url, timeout=20).text, 'html.parser')
-        btn = soup_dl.select_one("a.downloadButton") or soup_dl.select_one("a.btn")
-        if not btn: sys.exit(1)
-        btn_url = urljoin("https://www.apkmirror.com", btn["href"])
-        
-        soup_final = BeautifulSoup(session.get(btn_url, timeout=20).text, 'html.parser')
-        dl_link = soup_final.select_one("a[data-google-vignette='false'][rel='nofollow']") or soup_final.select_one("span > a[rel=nofollow]")
-        if not dl_link: sys.exit(1)
-        final_download_url = urljoin("https://www.apkmirror.com", dl_link["href"])
-        
-        real_dest = dest_path + ".apkm" if is_bundle else dest_path
-        with open(real_dest + ".is_bundle", "w") as f: f.write("true" if is_bundle else "false")
-        
-        r_file = session.get(final_download_url, timeout=300)
-        if r_file.status_code == 200:
-            with open(real_dest, "wb") as f: f.write(r_file.content)
-            print("SUCCESS")
-        else:
-            sys.exit(1)
-    except Exception as e:
-        sys.exit(1)
+                dpi_ok = not dpi_text or re.match(r"\d+-640dpi", dpi_text) or dpi_text in {"nodpi", "anydpi"} or (dpi and dpi_text == dpi)
 
-elif mode == "uptodown_pkg":
-    try:
-        r = session.get(url, timeout=20)
-        soup = BeautifulSoup(r.text, 'html.parser')
+                if arch_text in apparch and dpi_ok:
+                    dl_url = urljoin("https://www.apkmirror.com", str(link["href"]))
+                    is_bundle = (bt == "BUNDLE")
+                    break
+            if dl_url: break
+
+        if not dl_url:
+            raise Exception("No matching variant found")
+
+        soup_dl = parse_html(net.get(dl_url))
+        btn = soup_dl.select_one("a.btn")
+        if not btn: raise Exception("Download button not found")
+
+        soup_final = parse_html(net.get(urljoin("https://www.apkmirror.com", btn["href"])))
+        dl_link = soup_final.select_one("span > a[rel=nofollow]")
+        if not dl_link: raise Exception("Final link not found")
+
+        final_url = urljoin("https://www.apkmirror.com", dl_link["href"])
+        out_path = f"{dest}.apkm" if is_bundle else dest
+        net.download(final_url, out_path)
+        with open(f"{dest}.is_bundle", "w") as f:
+            f.write("true" if is_bundle else "false")
+        print("SUCCESS")
+
+    elif mode == "uptodown_pkg":
+        url = sys.argv[2]
+        html = net.get(f"{url}/download")
+        soup = parse_html(html)
         th = soup.find("th", string="Package Name")
         if th and th.find_next_sibling("td"):
             print(f"PKG:{th.find_next_sibling('td').get_text(strip=True)}")
         else:
             print("PKG:UNKNOWN")
-    except:
-        print("PKG:UNKNOWN")
-        sys.exit(0)
 
-elif mode == "uptodown_vers":
-    try:
-        r = session.get(f"{url}/versions", timeout=20)
-        soup = BeautifulSoup(r.text, 'html.parser')
-        vers = [el.get_text(strip=True) for el in soup.select(".version") if el.get_text(strip=True)]
-        print("\n".join(vers))
-    except: sys.exit(1)
+    elif mode == "uptodown_vers":
+        url = sys.argv[2]
+        html = net.get(f"{url}/versions")
+        soup = parse_html(html)
+        for el in soup.select(".version"):
+            if text := el.get_text(strip=True):
+                print(text)
 
-elif mode == "uptodown_dl":
-    try:
-        r = session.get(f"{url}/versions", timeout=20)
-        soup = BeautifulSoup(r.text, 'html.parser')
-        data_code = soup.select_one("#detail-app-name")["data-code"]
-        
-        version_url_data = None
+    elif mode == "uptodown_dl":
+        url, version, dest, arch, dpi = sys.argv[2:7]
+        if arch == "arm-v7a": arch = "armeabi-v7a"
+        html = net.get(f"{url}/versions")
+        soup = parse_html(html)
+        data_code = str(soup.select_one("#detail-app-name")["data-code"])
+
+        ver_url_dict = None
         is_bundle = False
         for i in range(1, 21):
-            payload = session.get(f"{url}/apps/{data_code}/versions/{i}").json()
-            data = payload.get("data", [])
+            data = json.loads(net.get(f"{url}/apps/{data_code}/versions/{i}")).get("data")
+            if not data: break
             for entry in data:
                 if entry.get("version") == version:
-                    version_url_data = entry.get("versionURL", {})
+                    ver_url_dict = entry.get("versionURL") or {}
                     is_bundle = (entry.get("kindFile") == "xapk")
                     break
-            if version_url_data: break
-            
-        ver_url = f"{version_url_data.get('url')}/{version_url_data.get('extraURL')}/{version_url_data.get('versionID')}"
-        soup_ver = BeautifulSoup(session.get(ver_url).text, 'html.parser')
+            if ver_url_dict: break
+
+        if not ver_url_dict: raise Exception("Version not found")
+
+        ver_url = f"{ver_url_dict.get('url', '')}/{ver_url_dict.get('extraURL', '')}/{ver_url_dict.get('versionID', '')}"
+        soup_ver = parse_html(net.get(ver_url))
         btn_variants = soup_ver.select_one(".button.variants")
-        
-        if btn_variants and btn_variants.get("data-version"):
-            base_url = url.rsplit("/", 1)[0]
-            files_payload = session.get(f"{base_url}/app/{data_code}/version/{btn_variants.get('data-version')}/files").json()
-            soup_files = BeautifulSoup(files_payload.get("content", ""), 'html.parser')
-            content = soup_files.select_one(".content")
-            
+
+        if btn_variants and (data_version := btn_variants.get("data-version")):
             apparch = {"arm64-v8a, armeabi-v7a, x86_64", "arm64-v8a, armeabi-v7a, x86, x86_64", "arm64-v8a, armeabi-v7a"}
             if arch != "all": apparch.add(arch)
+
+            base_url = url.rsplit("/", 1)[0]
+            files_html = json.loads(net.get(f"{base_url}/app/{data_code}/version/{data_version}/files")).get("content", "")
+            soup_files = parse_html(files_html)
+            content = soup_files.select_one(".content")
             
-            node_arch = ""
             matched_id = None
             for child in content.children:
                 if not getattr(child, "name", None): continue
                 if "variant" not in child.get("class", []):
                     node_arch = child.get_text(strip=True)
                     continue
-                if node_arch in apparch:
-                    file_type_tag = child.select_one(".v-file > span")
-                    is_bundle = file_type_tag.get_text(strip=True) == "xapk" if file_type_tag else False
+                if not node_arch or node_arch not in apparch:
+                    continue
+                
+                file_type_tag = child.select_one(".v-file > span")
+                is_bundle = file_type_tag.get_text(strip=True) == "xapk" if file_type_tag else False
+                try:
                     matched_id = child.select_one(".v-report")["data-file-id"]
                     break
-            soup_ver = BeautifulSoup(session.get(f"{url}/download/{matched_id}-x").text, 'html.parser')
-            
+                except: continue
+
+            if matched_id:
+                soup_ver = parse_html(net.get(f"{url}/download/{matched_id}-x"))
+
         dl_url = soup_ver.select_one("#detail-download-button")["data-url"]
-        real_dest = dest_path + ".apkm" if is_bundle else dest_path
-        with open(real_dest + ".is_bundle", "w") as f: f.write("true" if is_bundle else "false")
-        
-        r_file = session.get(f"https://dw.uptodown.com/dwn/{dl_url}", timeout=300)
-        with open(real_dest, "wb") as f: f.write(r_file.content)
+        out_path = f"{dest}.apkm" if is_bundle else dest
+        net.download(f"https://dw.uptodown.com/dwn/{dl_url}", out_path)
+        with open(f"{dest}.is_bundle", "w") as f:
+            f.write("true" if is_bundle else "false")
         print("SUCCESS")
-    except: sys.exit(1)
+
+except Exception as e:
+    epr(f"Python Error: {e}")
+    sys.exit(1)
 EOF
+	fi
+}
+
+run_python_backend() {
+	setup_python_backend
+	python3 "$TEMP_DIR/net_scraper.py" "$@"
 }
 
 # -------------------- apkmirror wrappers --------------------
@@ -592,7 +634,7 @@ dl_apkmirror() {
 	rm -f "${output}.is_bundle" "${output}.apkm.is_bundle"
 	run_python_backend "apkmirror_dl" "$url" "$version" "$output" "$arch" "$dpi" >/dev/null
 	
-	if [ -f "${output}.is_bundle" ] && [ "$(cat "${output}.is_bundle")" = "true" ] || [ -f "${output}.apkm.is_bundle" ]; then
+	if [ -f "${output}.is_bundle" ] && [ "$(cat "${output}.is_bundle")" = "true" ]; then
 		merge_splits "${output}.apkm" "${output}"
 	fi
 	[ -f "$output" ]
@@ -624,7 +666,7 @@ dl_uptodown() {
 	rm -f "${output}.is_bundle" "${output}.apkm.is_bundle"
 	run_python_backend "uptodown_dl" "$url" "$version" "$output" "$arch" "$dpi" >/dev/null
 	
-	if [ -f "${output}.is_bundle" ] && [ "$(cat "${output}.is_bundle")" = "true" ] || [ -f "${output}.apkm.is_bundle" ]; then
+	if [ -f "${output}.is_bundle" ] && [ "$(cat "${output}.is_bundle")" = "true" ]; then
 		merge_splits "${output}.apkm" "${output}"
 	fi
 	[ -f "$output" ]
