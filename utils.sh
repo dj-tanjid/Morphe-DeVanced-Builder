@@ -346,70 +346,125 @@ merge_splits() {
 
 # ----------------- Unified Python curl_cffi Backend -----------------
 run_python_backend() {
-	python3 -c "import curl_cffi" 2>/dev/null || python3 -m pip install -q curl_cffi bs4
+	export PIP_BREAK_SYSTEM_PACKAGES=1
+	if ! python3 -c "import curl_cffi, bs4" 2>/dev/null; then
+		python3 -m pip install -q curl_cffi bs4 urllib3 2>/dev/null || true
+	fi
 	
 	python3 - "${1:-}" "${2:-}" "${3:-}" "${4:-}" "${5:-}" "${6:-}" <<'EOF'
 import sys, os, re, json
-from curl_cffi import requests
-from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
-mode, url, version, dest_path, arch, dpi = sys.argv[1:7]
-session = requests.Session(impersonate="chrome120")
+try:
+    from curl_cffi import requests
+    from bs4 import BeautifulSoup
+except ImportError:
+    if sys.argv[1] in ("apkmirror_pkg", "uptodown_pkg"):
+        print("PKG:UNKNOWN")
+        sys.exit(0)
+    sys.exit(1)
 
-# Proven variant search logic from apkmirror.py
-def _search(rows, dpi, arch, bundle_type):
-    apparch = {"universal", "noarch", "arm64-v8a + armeabi-v7a", "arm64-v8a + armeabi"}
-    if arch != "all": apparch.add(arch)
+mode = sys.argv[1] if len(sys.argv) > 1 else ""
+url = sys.argv[2] if len(sys.argv) > 2 else ""
+version = sys.argv[3] if len(sys.argv) > 3 else ""
+dest_path = sys.argv[4] if len(sys.argv) > 4 else ""
+arch = sys.argv[5] if len(sys.argv) > 5 else ""
+dpi = sys.argv[6] if len(sys.argv) > 6 else ""
 
-    for row in reversed(rows):
-        link = row.select_one("div.table-cell:first-child > a")
-        if not link or not link.get("href"): continue
-        
-        cells = row.select("div.table-cell")
-        if len(cells) < 4: continue
-        
-        badge = cells[0].select_one(".apkm-badge")
-        b_type = badge.get_text(strip=True).upper() if badge else "APK"
-        if b_type != bundle_type: continue
-        
-        arch_text = cells[1].get_text(strip=True)
-        dpi_text = cells[3].get_text(strip=True)
-        
-        dpi_ok = not dpi_text or "nodpi" in dpi_text or "anydpi" in dpi_text or (dpi and dpi in dpi_text)
-        if arch_text in apparch and dpi_ok:
-            return urljoin("https://www.apkmirror.com", link["href"])
-    return None
+session = requests.Session(impersonate="chrome116")
 
-if mode == "apkmirror_dl":
+if mode == "apkmirror_pkg":
+    try:
+        r = session.get(url, timeout=20)
+        m = re.search(r"play\.google\.com/store/apps/details\?id=([\w.]+)", r.text)
+        if m: 
+            print(f"PKG:{m.group(1)}")
+        else:
+            print("PKG:UNKNOWN")
+    except:
+        print("PKG:UNKNOWN")
+        sys.exit(0)
+
+elif mode == "apkmirror_vers":
+    try:
+        cat = url.rstrip("/").split("/")[-1]
+        r = session.get(f"https://www.apkmirror.com/uploads/?appcategory={cat}", timeout=20)
+        soup = BeautifulSoup(r.text, 'html.parser')
+        vers = []
+        for a in soup.select("#primary a.fontBlack[href*='-release/']"):
+            text = a.get_text(strip=True)
+            if "beta" not in text.lower() and "alpha" not in text.lower():
+                vers.append(text.split()[-1])
+        print("\n".join(vers))
+    except: sys.exit(1)
+
+elif mode == "apkmirror_dl":
     try:
         category = url.rstrip("/").split("/")[-1]
-        ver_slug = version.replace(".", "-")
-        # Direct lookup to avoid search redirection issues
-        release_url = f"https://www.apkmirror.com/apk/google-inc/{category}/{category}-{ver_slug}-release/"
+        release_url = None
+        ver_normalized = version.replace(".", "-")
         
+        feed_html = session.get(f"https://www.apkmirror.com/uploads/?appcategory={category}", timeout=20).text
+        soup_feed = BeautifulSoup(feed_html, 'html.parser')
+        for a in soup_feed.find_all("a", href=re.compile(r"-release/")):
+            href_str = a.get("href", "")
+            if version in a.get_text() or ver_normalized in href_str:
+                release_url = urljoin("https://www.apkmirror.com", href_str)
+                break
+                
+        if not release_url:
+            search_html = session.get(f"https://www.apkmirror.com/?post_type=app_release&searchtype=apk&s={category}+{version}", timeout=20).text
+            soup_search = BeautifulSoup(search_html, 'html.parser')
+            for a in soup_search.find_all("a", href=re.compile(r"-release/")):
+                href_str = a.get("href", "")
+                if version in a.get_text() or ver_normalized in href_str:
+                    release_url = urljoin("https://www.apkmirror.com", href_str)
+                    break
+                    
+        if not release_url:
+            sys.exit(1)
+            
         r = session.get(release_url, timeout=20)
         soup = BeautifulSoup(r.text, 'html.parser')
         rows = soup.select("div.table-row.headerFont")
         
+        apparch = {"universal", "noarch", "arm64-v8a + armeabi-v7a", "arm64-v8a + armeabi"}
+        if arch != "all": apparch.add(arch)
+        
         dl_sub_url = None
         is_bundle = False
         
-        for b_type in ["APK", "BUNDLE"]:
-            found = _search(rows, dpi, arch, b_type)
-            if found:
-                dl_sub_url = found
-                is_bundle = (b_type == "BUNDLE")
-                break
+        for target_type in ["APK", "BUNDLE"]:
+            for row in reversed(rows):
+                badge = row.select_one(".apkm-badge")
+                b_type = badge.get_text(strip=True).upper() if badge else "APK"
+                if b_type != target_type: continue
+                
+                cells = row.select("div.table-cell")
+                if len(cells) < 4: continue
+                
+                arch_text = cells[1].get_text(strip=True)
+                dpi_text = cells[3].get_text(strip=True)
+                
+                dpi_ok = not dpi_text or "nodpi" in dpi_text or "anydpi" in dpi_text or (dpi and dpi in dpi_text)
+                if arch_text in apparch and dpi_ok:
+                    link = row.select_one("div.table-cell:first-child > a")
+                    if link and link.get("href"):
+                        dl_sub_url = urljoin("https://www.apkmirror.com", link["href"])
+                        is_bundle = (target_type == "BUNDLE")
+                        break
+            if dl_sub_url: break
             
         if not dl_sub_url: sys.exit(1)
         
-        soup_dl = BeautifulSoup(session.get(dl_sub_url, timeout=20).text, 'html.parser')
+        soup_dl = BeautifulSoup(session.get(dl_sub_url).text, 'html.parser')
         btn = soup_dl.select_one("a.btn")
+        if not btn: sys.exit(1)
         btn_url = urljoin("https://www.apkmirror.com", btn["href"])
         
-        soup_final = BeautifulSoup(session.get(btn_url, timeout=20).text, 'html.parser')
+        soup_final = BeautifulSoup(session.get(btn_url).text, 'html.parser')
         dl_link = soup_final.select_one("span > a[rel=nofollow]")
+        if not dl_link: sys.exit(1)
         final_download_url = urljoin("https://www.apkmirror.com", dl_link["href"])
         
         real_dest = dest_path + ".apkm" if is_bundle else dest_path
@@ -418,7 +473,8 @@ if mode == "apkmirror_dl":
         r_file = session.get(final_download_url, timeout=300)
         with open(real_dest, "wb") as f: f.write(r_file.content)
         print("SUCCESS")
-    except: sys.exit(1)
+    except Exception as e:
+        sys.exit(1)
 
 elif mode == "uptodown_pkg":
     try:
@@ -427,7 +483,11 @@ elif mode == "uptodown_pkg":
         th = soup.find("th", string="Package Name")
         if th and th.find_next_sibling("td"):
             print(f"PKG:{th.find_next_sibling('td').get_text(strip=True)}")
-    except: sys.exit(1)
+        else:
+            print("PKG:UNKNOWN")
+    except:
+        print("PKG:UNKNOWN")
+        sys.exit(0)
 
 elif mode == "uptodown_vers":
     try:
@@ -439,7 +499,7 @@ elif mode == "uptodown_vers":
 
 elif mode == "uptodown_dl":
     try:
-        r = session.get(url, timeout=20)
+        r = session.get(f"{url}/versions", timeout=20)
         soup = BeautifulSoup(r.text, 'html.parser')
         data_code = soup.select_one("#detail-app-name")["data-code"]
         
@@ -496,10 +556,23 @@ EOF
 # -------------------- apkmirror wrappers --------------------
 get_apkmirror_resp() {
 	__APKMIRROR_URL__="$1"
-	__APKMIRROR_RESP__=$(run_python_backend "apkmirror_pkg" "$1") || return 1
 	__APKMIRROR_CAT__="${1##*/}"
+	__APKMIRROR_RESP__=$(run_python_backend "apkmirror_pkg" "$1") || return 1
 }
-get_apkmirror_pkg_name() { grep -oP '^PKG:\K.*' <<<"$__APKMIRROR_RESP__"; }
+
+get_apkmirror_pkg_name() { 
+	local pkg=$(grep -oP '^PKG:\K.*' <<<"$__APKMIRROR_RESP__" | head -1)
+	if [ -z "$pkg" ] || [ "$pkg" = "UNKNOWN" ]; then
+		case "${__APKMIRROR_CAT__,,}" in
+			*youtube-music*) pkg="com.google.android.apps.youtube.music" ;;
+			*youtube*) pkg="com.google.android.youtube" ;;
+			*photos*) pkg="com.google.android.apps.photos" ;;
+			*reddit*) pkg="com.reddit.frontpage" ;;
+			*twitter*|*x*) pkg="com.twitter.android" ;;
+		esac
+	fi
+	echo "$pkg"
+}
 get_apkmirror_vers() { run_python_backend "apkmirror_vers" "$__APKMIRROR_URL__"; }
 
 dl_apkmirror() {
@@ -522,7 +595,20 @@ get_uptodown_resp() {
 	__UPTODOWN_URL__="$1"
 	__UPTODOWN_RESP__=$(run_python_backend "uptodown_pkg" "$1") || return 1
 }
-get_uptodown_pkg_name() { grep -oP '^PKG:\K.*' <<<"$__UPTODOWN_RESP__"; }
+
+get_uptodown_pkg_name() { 
+	local pkg=$(grep -oP '^PKG:\K.*' <<<"$__UPTODOWN_RESP__" | head -1)
+	if [ -z "$pkg" ] || [ "$pkg" = "UNKNOWN" ]; then
+		case "${__UPTODOWN_URL__,,}" in
+			*youtube-music*) pkg="com.google.android.apps.youtube.music" ;;
+			*youtube*) pkg="com.google.android.youtube" ;;
+			*photos*) pkg="com.google.android.apps.photos" ;;
+			*reddit*) pkg="com.reddit.frontpage" ;;
+			*twitter*|*x*) pkg="com.twitter.android" ;;
+		esac
+	fi
+	echo "$pkg"
+}
 get_uptodown_vers() { run_python_backend "uptodown_vers" "$__UPTODOWN_URL__"; }
 
 dl_uptodown() {
