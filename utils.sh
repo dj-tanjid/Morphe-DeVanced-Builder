@@ -427,49 +427,45 @@ elif mode == "apkmirror_dl":
             
         org, cat = m_url.group(1), m_url.group(2)
         ver_slug = version.replace(".", "-").replace(" ", "-")
-        release_url = f"https://www.apkmirror.com/apk/{org}/{cat}/{cat}-{ver_slug}-release/"
         
-        log(f"Testing direct release URL: {release_url}")
-        r_rel = session.get(release_url, timeout=20, allow_redirects=True)
-        soup_rel = BeautifulSoup(r_rel.text, 'html.parser')
+        release_url = None
         
-        # More robust row extraction: look for valid table rows regardless of headerFont class
-        valid_rows = [r for r in soup_rel.select(".table-row") if len(r.select(".table-cell")) >= 4]
-
-        # Trigger fallback if we hit a 404 OR if the direct page contains no actual variant rows (e.g. redirected to category)
-        if r_rel.status_code == 404 or not valid_rows:
-            log("Direct URL 404 or missing variants. Falling back to search feed...")
-            release_url = None
-            
+        # 1. Broad Global Search Fallback (Aggressive matching)
+        search_html = session.get(f"https://www.apkmirror.com/?post_type=app_release&searchtype=apk&s={cat}+{version}", timeout=20).text
+        soup_search = BeautifulSoup(search_html, 'html.parser')
+        
+        for a in soup_search.find_all("a", href=re.compile(r"-release/$")):
+            text = a.get_text(strip=True)
+            href = a.get("href", "")
+            # Soft match: if the version string is anywhere in the link text or URL slug
+            if version in text or ver_slug in href or version.replace(".", "") in href.replace("-", ""):
+                release_url = urljoin("https://www.apkmirror.com", href)
+                log(f"Found via global search match: {release_url}")
+                break
+                
+        # 2. Uploads Feed Fallback
+        if not release_url:
+            log("Not in global search, trying uploads feed...")
             feed_html = session.get(f"https://www.apkmirror.com/uploads/?appcategory={cat}", timeout=20).text
             soup_feed = BeautifulSoup(feed_html, 'html.parser')
-            for a in soup_feed.find_all("a", href=re.compile(r"-release/")):
-                href_str = a.get("href", "")
-                if version in a.get_text() or ver_slug in href_str:
-                    release_url = urljoin("https://www.apkmirror.com", href_str)
-                    log(f"Found in category feed: {release_url}")
+            for a in soup_feed.find_all("a", href=re.compile(r"-release/$")):
+                text = a.get_text(strip=True)
+                href = a.get("href", "")
+                if version in text or ver_slug in href or version.replace(".", "") in href.replace("-", ""):
+                    release_url = urljoin("https://www.apkmirror.com", href)
+                    log(f"Found via uploads feed: {release_url}")
                     break
-                    
-            if not release_url:
-                log("Not in feed, trying global search fallback...")
-                search_html = session.get(f"https://www.apkmirror.com/?post_type=app_release&searchtype=apk&s={cat}+{version}", timeout=20).text
-                soup_search = BeautifulSoup(search_html, 'html.parser')
-                for a in soup_search.find_all("a", href=re.compile(r"-release/")):
-                    href_str = a.get("href", "")
-                    if version in a.get_text() or ver_slug in href_str:
-                        release_url = urljoin("https://www.apkmirror.com", href_str)
-                        log(f"Found via global search: {release_url}")
-                        break
-                        
-            if not release_url:
-                log(f"Version {version} not found on APKMirror.")
-                sys.exit(1)
-                
-            r_rel = session.get(release_url, timeout=20)
-            soup_rel = BeautifulSoup(r_rel.text, 'html.parser')
-            valid_rows = [r for r in soup_rel.select(".table-row") if len(r.select(".table-cell")) >= 4]
+
+        if not release_url:
+            log(f"Version {version} heavily unidentifiable on APKMirror. Skipping.")
+            sys.exit(1)
             
-        log(f"Found {len(valid_rows)} variant rows.")
+        r_rel = session.get(release_url, timeout=20)
+        soup_rel = BeautifulSoup(r_rel.text, 'html.parser')
+        
+        # Select all rows that contain valid variants
+        rows = [r for r in soup_rel.select(".table-row") if len(r.select(".table-cell")) >= 4]
+        log(f"Found {len(rows)} variant rows.")
         
         apparch = {"universal", "noarch", "arm64-v8a + armeabi-v7a", "arm64-v8a + armeabi"}
         if arch != "all": apparch.add(arch)
@@ -479,10 +475,7 @@ elif mode == "apkmirror_dl":
         
         for target_type in ["APK", "BUNDLE"]:
             log(f"Checking for {target_type} variants...")
-            for row in reversed(valid_rows):
-                link = row.select_one(".table-cell:first-child > a")
-                if not link or not link.get("href"): continue
-                
+            for row in reversed(rows):
                 cells = row.select(".table-cell")
                 badge = cells[0].select_one(".apkm-badge")
                 b_type = badge.get_text(strip=True).upper() if badge else "APK"
@@ -493,10 +486,13 @@ elif mode == "apkmirror_dl":
                 
                 dpi_ok = not dpi_text or "nodpi" in dpi_text or "anydpi" in dpi_text or (dpi and dpi in dpi_text)
                 if arch_text in apparch and dpi_ok:
-                    dl_sub_url = urljoin("https://www.apkmirror.com", link["href"])
-                    is_bundle = (target_type == "BUNDLE")
-                    log(f"Matched {target_type} variant: Arch={arch_text}, DPI={dpi_text}")
-                    break
+                    # Match any variant link inside the cell
+                    link = row.select_one("a[href*='/download/']") or cells[0].select_one("a.accent_color")
+                    if link and link.get("href"):
+                        dl_sub_url = urljoin("https://www.apkmirror.com", link["href"])
+                        is_bundle = (target_type == "BUNDLE")
+                        log(f"Matched {target_type} variant: Arch={arch_text}, DPI={dpi_text}")
+                        break
             if dl_sub_url: break
             
         if not dl_sub_url:
@@ -505,7 +501,7 @@ elif mode == "apkmirror_dl":
         
         log(f"Loading variant page: {dl_sub_url}")
         soup_dl = BeautifulSoup(session.get(dl_sub_url, timeout=20).text, 'html.parser')
-        btn = soup_dl.select_one("a.downloadButton") or soup_dl.select_one("a.btn") or soup_dl.select_one("a.accent_bg")
+        btn = soup_dl.select_one("a.downloadButton") or soup_dl.select_one("a[href*='key=']") or soup_dl.select_one("a.btn")
         if not btn:
             log("Download button not found on variant page.")
             sys.exit(1)
