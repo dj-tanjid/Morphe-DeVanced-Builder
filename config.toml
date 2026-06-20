@@ -111,7 +111,7 @@ excluded-patches = """\
     """
 # included-patches = ""
 patches-version = "dev" # Options 'latest', 'dev', or A specific version tag
-apkmirror-dlurl = "https://www.apkmirror.com/apk/redditinc/reddit/"
+apkmirror-dlurl = "https://www.apkmirror.com/apk/redditinc/reddit"
 # uptodown-dlurl = "https://reddit-official-app.en.uptodown.com/android"
 # archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.reddit.frontpage"
 
@@ -154,7 +154,7 @@ included-patches = """\
     'Bring back twitter' \
     'Dynamic color' \
     """
-apkmirror-dlurl = "https://www.apkmirror.com/apk/x-corp/twitter/"
+apkmirror-dlurl = "https://www.apkmirror.com/apk/x-corp/twitter"
 # uptodown-dlurl = "https://twitter.en.uptodown.com/android"
 # archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.twitter.android"
 
@@ -172,7 +172,7 @@ patches-version = "dev" # Options 'latest', 'dev', or A specific version tag
 included-patches = """\
     'Dynamic color' \
     """
-apkmirror-dlurl = "https://www.apkmirror.com/apk/x-corp/twitter/"
+apkmirror-dlurl = "https://www.apkmirror.com/apk/x-corp/twitter"
 uptodown-dlurl = "https://twitter.en.uptodown.com/android"
 archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.twitter.android"
 
