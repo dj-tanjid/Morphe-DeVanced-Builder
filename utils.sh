@@ -345,7 +345,7 @@ merge_splits() {
 }
 
 # ----------------- Pure Python Independent Engine -----------------
-# Completely insulated engine that rotates browsers to avoid Cloudflare blocks
+# Includes advanced Referer Threading and Delay to prevent Cloudflare Blocks
 setup_python_backend() {
 	mkdir -p "$TEMP_DIR"
 	if [ ! -f "$TEMP_DIR/network_engine.py" ]; then
@@ -373,9 +373,11 @@ class Scraper:
     def __init__(self):
         self.session = None
 
-    def get_soup(self, url, referer=None):
-        headers = {"Referer": referer} if referer else {}
-        headers["Accept-Language"] = "en-US,en;q=0.9"
+    def get_soup(self, url, referer="https://www.apkmirror.com/"):
+        headers = {"Referer": referer, "Accept-Language": "en-US,en;q=0.9"}
+        
+        # Core natural delay to prevent 429 Too Many Requests CF triggers
+        time.sleep(1.5)
         
         if self.session:
             try:
@@ -385,27 +387,24 @@ class Scraper:
             except:
                 pass
 
-        # Rotate browsers if a challenge is hit
-        browsers = ["chrome124", "safari15_5", "chrome120", "chrome110", "edge99", "safari_17_0"]
+        # Priority browsers with highest Cloudflare bypass rates
+        browsers = ["chrome120", "chrome124", "safari15_5", "edge99"]
         for browser in browsers:
             try:
-                log(f"Connecting with impersonate={browser}...")
+                time.sleep(1)
                 new_session = requests.Session(impersonate=browser)
                 r = new_session.get(url, headers=headers, timeout=20, allow_redirects=True)
                 
                 if r.status_code in (403, 503) or "Just a moment" in r.text or "cf-browser-verification" in r.text:
-                    log(f"Cloudflare challenge hit with {browser}.")
-                    time.sleep(1)
                     continue
                     
                 self.session = new_session
                 return BeautifulSoup(r.text, 'html.parser'), r
             except Exception as e:
-                log(f"Error with {browser}: {e}")
                 time.sleep(1)
                 
         log("All browsers failed Cloudflare checks.")
-        return BeautifulSoup("", 'html.parser'), None
+        return None, None
 
     def download(self, url, dest_path, is_bundle, referer):
         headers = {"Referer": referer} if referer else {}
@@ -447,10 +446,11 @@ def main():
     elif mode == "apkmirror_vers":
         cat = url.rstrip("/").split("/")[-1]
         soup, _ = scraper.get_soup(f"https://www.apkmirror.com/uploads/?appcategory={cat}")
-        for a in soup.find_all("a", href=re.compile(r"-release/$")):
-            txt = a.text.strip()
-            if txt and "beta" not in txt.lower() and "alpha" not in txt.lower():
-                print(txt.split()[-1])
+        if soup:
+            for a in soup.find_all("a", href=re.compile(r"-release/$")):
+                txt = a.text.strip()
+                if txt and "beta" not in txt.lower() and "alpha" not in txt.lower():
+                    print(txt.split()[-1])
 
     elif mode == "apkmirror_dl":
         version, dest_path, arch, dpi = sys.argv[3:7]
@@ -459,20 +459,20 @@ def main():
         cat = url.rstrip("/").split("/")[-1]
         log(f"Searching APKMirror for version {version} ({cat})")
         
-        # Aggressive normalization logic to handle "11.81.0-release.0" matching "twitter-11-81-0-release-0-release"
-        clean_target = re.sub(r'[^a-zA-Z0-9]', '', version.lower())
-        search_url = f"https://www.apkmirror.com/?post_type=app_release&searchtype=apk&s={cat}+{version}"
+        # SMART SEARCH: Strip out everything except base numbers for aggressive APKMirror indexing support
+        search_term = version.split("-")[0].strip()
+        search_url = f"https://www.apkmirror.com/?post_type=app_release&searchtype=apk&s={cat}+{search_term}"
         
         soup_search, _ = scraper.get_soup(search_url)
         if not soup_search: sys.exit(1)
         
         release_url = None
-        available_versions = set()
+        ver_slug = version.replace(".", "-").replace(" ", "-")
+        clean_target = re.sub(r'[^a-zA-Z0-9]', '', version.lower())
         
         for a in soup_search.find_all("a", href=re.compile(r"-release/$")):
             txt = a.text.strip()
             href = a.get("href", "")
-            if txt: available_versions.add(txt.split()[-1])
             
             clean_slug = re.sub(r'[^a-zA-Z0-9]', '', href.lower())
             clean_txt = re.sub(r'[^a-zA-Z0-9]', '', txt.lower())
@@ -483,10 +483,10 @@ def main():
                 break
                 
         if not release_url:
-            log(f"Version {version} NOT FOUND! Available versions: {', '.join(list(available_versions)[:10])}")
+            log(f"Version {version} not found in search results.")
             sys.exit(1)
             
-        soup_rel, r_rel = scraper.get_soup(release_url)
+        soup_rel, r_rel = scraper.get_soup(release_url, referer=search_url)
         if not r_rel: sys.exit(1)
         
         rows = [r for r in soup_rel.select("div.table-row") if len(r.select("div.table-cell")) >= 4]
@@ -523,14 +523,14 @@ def main():
             log("No matching variant architecture/DPI found.")
             sys.exit(1)
             
-        soup_dl, _ = scraper.get_soup(dl_sub_url)
+        soup_dl, _ = scraper.get_soup(dl_sub_url, referer=release_url)
         btn = soup_dl.select_one("a.downloadButton") or soup_dl.select_one("a.btn") or soup_dl.find("a", class_=re.compile("download"))
         if not btn:
             log("Download button not found on variant page.")
             sys.exit(1)
             
         btn_url = urljoin("https://www.apkmirror.com", btn["href"])
-        soup_final, _ = scraper.get_soup(btn_url)
+        soup_final, _ = scraper.get_soup(btn_url, referer=dl_sub_url)
         
         dl_link = soup_final.select_one("a[data-google-vignette='false'][rel='nofollow']") or soup_final.select_one("span > a[rel=nofollow]") or soup_final.find("a", string=re.compile("here", re.I))
         if not dl_link:
@@ -550,8 +550,9 @@ def main():
 
     elif mode == "uptodown_vers":
         soup, _ = scraper.get_soup(f"{url}/versions")
-        for el in soup.select(".version"):
-            if t := el.get_text(strip=True): print(t)
+        if soup:
+            for el in soup.select(".version"):
+                if t := el.get_text(strip=True): print(t)
 
     elif mode == "uptodown_dl":
         version, dest_path, arch, dpi = sys.argv[3:7]
@@ -564,10 +565,11 @@ def main():
         is_bundle = False
         for i in range(1, 21):
             _, r = scraper.get_soup(f"{url}/apps/{data_code}/versions/{i}")
+            if not r: continue
             data = json.loads(r.text).get("data", [])
             for entry in data:
                 if entry.get("version") == version:
-                    ver_url_data = entry.get("versionURL") or {}
+                    ver_url_data = entry.get("versionURL", {})
                     is_bundle = (entry.get("kindFile") == "xapk")
                     break
             if ver_url_data: break
@@ -619,9 +621,11 @@ EOF
 }
 
 run_python_backend() {
-	setup_python_backend
 	python3 "$TEMP_DIR/network_engine.py" "$@"
 }
+
+# Ensure the Python setup runs exactly once when utils is sourced
+setup_python_backend
 
 # -------------------- apkmirror wrappers --------------------
 get_apkmirror_resp() {
@@ -648,7 +652,7 @@ dl_apkmirror() {
 		return 1
 	fi
 	
-	if [ -f "${output}.is_bundle" ] && [ "$(cat "${output}.is_bundle")" = "true" ]; then
+	if [ -f "${output}.is_bundle" ] && [ "$(cat "${output}.is_bundle")" = "true" ] || [ -f "${output}.apkm.is_bundle" ]; then
 		merge_splits "${output}.apkm" "${output}"
 	fi
 	[ -f "$output" ]
@@ -674,7 +678,7 @@ dl_uptodown() {
 		return 1
 	fi
 	
-	if [ -f "${output}.is_bundle" ] && [ "$(cat "${output}.is_bundle")" = "true" ]; then
+	if [ -f "${output}.is_bundle" ] && [ "$(cat "${output}.is_bundle")" = "true" ] || [ -f "${output}.apkm.is_bundle" ]; then
 		merge_splits "${output}.apkm" "${output}"
 	fi
 	[ -f "$output" ]
