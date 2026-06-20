@@ -389,6 +389,7 @@ if mode == "apkmirror_pkg":
     elif "photos" in url: resolved_pkg = "com.google.android.apps.photos"
     elif "reddit" in url: resolved_pkg = "com.reddit.frontpage"
     elif "twitter" in url: resolved_pkg = "com.twitter.android"
+    elif "x-corp" in url: resolved_pkg = "com.twitter.android"
 
     try:
         r = session.get(url, timeout=20)
@@ -418,36 +419,41 @@ elif mode == "apkmirror_vers":
 elif mode == "apkmirror_dl":
     try:
         log(f"Finding APKMirror release for version {version}...")
-        cat = url.rstrip("/").split("/")[-1]
-        release_url = None
         
-        # 1. Search main category feed
-        feed_html = session.get(f"https://www.apkmirror.com/uploads/?appcategory={cat}", timeout=20).text
-        soup_feed = BeautifulSoup(feed_html, 'html.parser')
-        for a in soup_feed.find_all("a", class_="fontBlack", href=re.compile(r"-release/")):
-            text = a.get_text(strip=True)
-            if version in text or text.endswith(version):
-                release_url = urljoin("https://www.apkmirror.com", a["href"])
-                log(f"Found in category feed: {release_url}")
-                break
-                
-        # 2. Global Search Fallback
-        if not release_url:
-            log("Not in feed, trying global search fallback...")
-            search_html = session.get(f"https://www.apkmirror.com/?post_type=app_release&searchtype=apk&s={cat}+{version}", timeout=20).text
-            soup_search = BeautifulSoup(search_html, 'html.parser')
-            for a in soup_search.find_all("a", class_="fontBlack", href=re.compile(r"-release/")):
+        # 1. Parse org and cat explicitly from URL to ensure perfect mapping
+        m_url = re.search(r"apkmirror\.com/apk/([^/]+)/([^/]+)", url)
+        if not m_url:
+            log("Could not parse org and cat from URL.")
+            sys.exit(1)
+            
+        org, cat = m_url.group(1), m_url.group(2)
+        ver_slug = version.replace(".", "-").replace(" ", "-")
+        
+        # 2. Build direct URL
+        release_url = f"https://www.apkmirror.com/apk/{org}/{cat}/{cat}-{ver_slug}-release/"
+        log(f"Testing direct release URL: {release_url}")
+        
+        r_rel = session.get(release_url, timeout=20, allow_redirects=True)
+        
+        # 3. Fallback search if direct URL is blocked or changed
+        if r_rel.status_code == 404:
+            log("Direct URL 404. Falling back to search feed...")
+            release_url = None
+            feed_html = session.get(f"https://www.apkmirror.com/uploads/?appcategory={cat}", timeout=20).text
+            soup_feed = BeautifulSoup(feed_html, 'html.parser')
+            for a in soup_feed.find_all("a", class_="fontBlack", href=re.compile(r"-release/")):
                 text = a.get_text(strip=True)
                 if version in text or text.endswith(version):
                     release_url = urljoin("https://www.apkmirror.com", a["href"])
-                    log(f"Found via global search: {release_url}")
+                    log(f"Found in category feed: {release_url}")
                     break
                     
-        if not release_url:
-            log(f"Version {version} not found on APKMirror.")
-            sys.exit(1)
+            if not release_url:
+                log("Version not found on APKMirror.")
+                sys.exit(1)
+                
+            r_rel = session.get(release_url, timeout=20)
             
-        r_rel = session.get(release_url, timeout=20)
         soup_rel = BeautifulSoup(r_rel.text, 'html.parser')
         rows = soup_rel.select("div.table-row.headerFont")
         log(f"Found {len(rows)} variant rows.")
@@ -637,11 +643,11 @@ dl_apkmirror() {
 	fi
 	rm -f "${output}.is_bundle" "${output}.apkm.is_bundle"
 	
-	if ! run_python_backend "apkmirror_dl" "$url" "$version" "$output" "$arch" "$dpi"; then
+	if ! run_python_backend "apkmirror_dl" "$url" "$version" "$output" "$arch" "$dpi" >/dev/null; then
 		return 1
 	fi
 	
-	if [ -f "${output}.is_bundle" ] && [ "$(cat "${output}.is_bundle")" = "true" ]; then
+	if [ -f "${output}.is_bundle" ] && [ "$(cat "${output}.is_bundle")" = "true" ] || [ -f "${output}.apkm.is_bundle" ]; then
 		merge_splits "${output}.apkm" "${output}"
 	fi
 	[ -f "$output" ]
@@ -672,11 +678,11 @@ dl_uptodown() {
 	local url="${1%/}" version=$2 output=$3 arch=$4 dpi=$5
 	rm -f "${output}.is_bundle" "${output}.apkm.is_bundle"
 	
-	if ! run_python_backend "uptodown_dl" "$url" "$version" "$output" "$arch" "$dpi"; then
+	if ! run_python_backend "uptodown_dl" "$url" "$version" "$output" "$arch" "$dpi" >/dev/null; then
 		return 1
 	fi
 	
-	if [ -f "${output}.is_bundle" ] && [ "$(cat "${output}.is_bundle")" = "true" ]; then
+	if [ -f "${output}.is_bundle" ] && [ "$(cat "${output}.is_bundle")" = "true" ] || [ -f "${output}.apkm.is_bundle" ]; then
 		merge_splits "${output}.apkm" "${output}"
 	fi
 	[ -f "$output" ]
