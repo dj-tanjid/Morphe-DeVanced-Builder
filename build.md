@@ -1,4 +1,4 @@
-Reddit-Morphe: 2026.24.0  
+Reddit-Morphe: 2026.25.0  
 YT-Music-Morphe: 9.24.51  
 YouTube-Morphe: 21.24.368  
 
@@ -8,5 +8,5 @@ YouTube-Morphe: 21.24.368
 
 Patches and CLI Sources :  
 CLI: MorpheApp/morphe-cli-1.9.1-all.jar  
-Patches: MorpheApp/patches-1.32.0-dev.4.mpp  
-[Changelog](https://github.com/MorpheApp/morphe-patches/releases/tag/v1.32.0-dev.4)  
+Patches: MorpheApp/patches-1.32.0-dev.5.mpp  
+[Changelog](https://github.com/MorpheApp/morphe-patches/releases/tag/v1.32.0-dev.5)  
