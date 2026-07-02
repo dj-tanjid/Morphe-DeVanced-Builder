@@ -68,7 +68,7 @@ You can consider using [rvmm-zygisk-mount](https://github.com/j-hc/rvmm-zygisk-m
 ## Credits
 - [j-hc](https://github.com/j-hc) for creating this amazing builder.
 - [Peter Noël Muller](https://github.com/peternmuller) and [Nguyễn Văn Bằng](https://github.com/nvbangg) for their work and inspirations.
-- And of course, [Morphe Team](https://github.com/MorpheApp), [Aaron Veil](https://github.com/anddea), [ReVanced Team](https://github.com/ReVanced), [crimera](https://github.com/crimera) and [Sarthak Sinha](https://github.com/RookieEnough/) for their work on the Morphe/ReVanced/Piko apps!
+- And of course, [Morphe Team](https://github.com/MorpheApp), [Aaron Veil](https://github.com/anddea), [ReVanced Team](https://github.com/ReVanced) and [Sarthak Sinha](https://github.com/RookieEnough/) for their work on the Morphe/De-Vanced apps!
 
 ## License
     Copyright (C) 2024-2026 Tanjidul Hossain
