@@ -7,7 +7,7 @@ BIN_DIR="bin"
 BUILD_DIR="build"
 DL_SRCS=("direct" "github" "archive" "apkmirror" "uptodown")
 
-if [ -n "${GITHUB_TOKEN:-}" ]; then GH_HEADER="Authorization: token ${GITHUB_TOKEN}"; else GH_HEADER=; fi
+if [ "${GITHUB_TOKEN-}" ]; then GH_HEADER="Authorization: token ${GITHUB_TOKEN}"; else GH_HEADER=; fi
 NEXT_VER_CODE=${NEXT_VER_CODE:-$(date +'%Y%m%d')}
 OS=$(uname -o)
 
@@ -26,7 +26,6 @@ toml_get() {
 	local op quote_placeholder=$'\001'
 	op=$(jq -r ".\"${2}\" | values" <<<"$1" 2>/dev/null)
 	if [[ -n "$op" && "$op" != "null" ]]; then
-        # Safer text stripping to prevent bad substitution errors
 		op=$(echo "$op" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
 		op=${op//\\\'/$quote_placeholder}
 		op=${op//"''"/$quote_placeholder}
@@ -45,9 +44,14 @@ wpr() {
 	echo >&2 -e "\033[0;33m[!] ${1}\033[0m"
 	if [ -n "${GITHUB_REPOSITORY:-}" ]; then echo >&2 -e "::warning::utils.sh [!] ${1}\n"; fi
 }
+
+_clean_tmp() {
+	rm -rf ./${TEMP_DIR}/*tmp.* ./${TEMP_DIR}/*tmp_* ./${TEMP_DIR}/*/*tmp.* ./${TEMP_DIR}/*-temporary-files ./*-temporary-files
+}
+
 abort() {
 	epr "ABORT: ${1-}"
-	rm -rf ./${TEMP_DIR}/*tmp.* ./${TEMP_DIR}/*/*tmp.* ./${TEMP_DIR}/*-temporary-files ./${TEMP_DIR}/*.apk-temporary-files ./*-temporary-files
+	_clean_tmp
 	trap - SIGTERM SIGINT EXIT
 	kill -9 -- -$$ 2>/dev/null
 	exit 1
@@ -61,7 +65,6 @@ get_prebuilts() {
 	cl_dir=${TEMP_DIR}/${cl_dir,,}-rv
 	[[ -d "$cl_dir" ]] || mkdir -p "$cl_dir"
 
-    # Avoid set -- splitting to prevent unbound variable crashes
     local configs=(
         "${cli_src}|CLI|${cli_ver}|cli"
         "${patches_src}|Patches|${patches_ver}|patches"
@@ -123,7 +126,7 @@ get_prebuilts() {
 			url=$(jq -r .url <<<"$asset")
 			name=$(jq -r .name <<<"$asset")
 			file="${dir}/${name}"
-			gh_dl "$file" "$url" >&2 || return 1
+			gh_dl "$file" >&2 "$url" || return 1
 			echo "$tag: $(cut -d/ -f1 <<<"$src")/${name}  " >>"${cl_dir}/changelog.md"
 		else
 			grab_cl=false
@@ -354,7 +357,7 @@ setup_python_backend() {
 	mkdir -p "$TEMP_DIR"
 	if [ ! -f "$TEMP_DIR/network_engine.py" ]; then
 		export PIP_BREAK_SYSTEM_PACKAGES=1
-		python3 -m pip install -q "curl-cffi>=0.15.0" "beautifulsoup4>=4.15.0" urllib3 2>/dev/null || true
+		python3 -m pip install -q "curl_cffi>=0.7.0" beautifulsoup4 urllib3 2>/dev/null || true
 		cat << 'EOF' > "$TEMP_DIR/network_engine.py"
 import sys, os, re, time, json, random
 from urllib.parse import urljoin
@@ -1019,7 +1022,16 @@ build_rv() {
 	if [[ -n "${args[patcher_args]:-}" ]]; then p_patcher_args+=("${args[patcher_args]}"); fi
 	for build_mode in "${build_mode_arr[@]}"; do
 		patcher_args=("${p_patcher_args[@]}")
-		pr "running compilation context: building variant block ${table}"
+		
+		# --- DYNAMIC BUILD MODE PRINT STATEMENT FIX ---
+		local display_mode
+		if [[ "$build_mode" == "apk" ]]; then
+			display_mode="APK"
+		else
+			display_mode="Module"
+		fi
+		pr "running compilation context: building \"${display_mode}\" variant of ${table}"
+		
 		if [[ -n "$microg_patch" ]]; then
 			patched_apk="${TEMP_DIR}/${app_name_l}-${rv_brand_f}-${version_f}-${arch_f}-${build_mode}.apk"
 		else
