@@ -45,9 +45,14 @@ wpr() {
 	echo >&2 -e "\033[0;33m[!] ${1}\033[0m"
 	if [ "${GITHUB_REPOSITORY-}" ]; then echo >&2 -e "::warning::utils.sh [!] ${1}\n"; fi
 }
+
+_clean_tmp() {
+	rm -rf ./${TEMP_DIR}/*tmp.* ./${TEMP_DIR}/*tmp_* ./${TEMP_DIR}/*/*tmp.* ./${TEMP_DIR}/*-temporary-files ./*-temporary-files
+}
+
 abort() {
 	epr "ABORT: ${1-}"
-	rm -rf ./${TEMP_DIR}/*tmp.* ./${TEMP_DIR}/*/*tmp.* ./${TEMP_DIR}/*-temporary-files ./${TEMP_DIR}/*.apk-temporary-files ./*-temporary-files
+	_clean_tmp
 	trap - SIGTERM SIGINT EXIT
 	kill -9 -- -$$ 2>/dev/null
 	exit 1
@@ -355,9 +360,10 @@ setup_python_backend() {
 import sys, os, re, time, json, random
 from urllib.parse import urljoin
 
-def log(msg):
-    sys.stderr.write(f"[Scraper] {msg}\n")
-    sys.stderr.flush()
+	local apparch=('universal' 'noarch' 'arm64-v8a + armeabi-v7a')
+	if [ "$arch" != "all" ]; then
+		apparch+=("$arch")
+	fi
 
 try:
     from curl_cffi import requests
@@ -740,18 +746,20 @@ dl_uptodown() {
 # -------------------- archive --------------------
 dl_archive() {
 	local url=$1 version=$2 output=$3 arch=$4
-	local path output_m version=${version// /}
-	local version_f=${version#v}
+	local path version=${version// /}
 
 	if [ -f "${output}.apkm" ]; then
 		merge_splits "${output}.apkm" "$output"
 		return 0
 	fi
 
-	path=$(grep -m1 "${version_f}-${arch// /}" <<<"$__ARCHIVE_RESP__" || grep -m1 "${version_f}" <<<"$__ARCHIVE_RESP__") || return 1
-	if [ "${path##*.}" = "apkm" ]; then output_m="${output}.apkm"; else output_m=$output; fi
-	_req "${url}/${path}" "$output_m" || return 1
-	if [ "${path##*.}" = "apkm" ]; then merge_splits "$output_m" "$output"; fi
+	path=$(grep -m1 "${version_f#v}-${arch// /}" <<<"$__ARCHIVE_RESP__") || return 1
+	if [ "${path##*.}" = "apkm" ]; then
+		req "${url}/${path}" "${output}.apkm" || return 1
+		merge_splits "${output}.apkm" "$output"
+	else
+		req "${url}/${path}" "${output}" || return 1
+	fi
 }
 get_archive_resp() {
 	local r
@@ -856,7 +864,16 @@ dl_github() {
 # -------------------- direct --------------------
 dl_direct() {
 	local url=$1 version=${2// /-} output=$3 arch=$4 _dpi=$5
-	_req "$url" "${output}" || return 1
+	if ! grep -q "${version_f#v}-${arch// /}" <<<"$url"; then
+		epr "Given direct-dlurl for $output is not compatible. Set proper 'arch' and 'version' options."
+		return 1
+	fi
+	if [ "${url##*.}" = "apkm" ]; then
+		req "$url" "${output}.apkm" || return 1
+		merge_splits "${output}.apkm" "$output"
+	else
+		req "$url" "${output}" || return 1
+	fi
 }
 get_direct_vers() { cut -d- -f2 <<<"$__DIRECT_APKNAME__"; }
 get_direct_pkg_name() { cut -d- -f1 <<<"$__DIRECT_APKNAME__"; }
