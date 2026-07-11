@@ -27,7 +27,7 @@ toml_get() {
 	op=$(jq -r ".\"${2}\" | values" <<<"$1")
 	if [ "$op" ]; then
 		op="${op#"${op%%[![:space:]]*}"}"
-		op="${op%"${op##*[![:space:]]}"}"
+		op="${op\%"${op##*[![:space:]]}"}"
 		op=${op//\\\'/$quote_placeholder}
 		op=${op//"''"/$quote_placeholder}
 		op=${op//"'"/'"'}
@@ -51,10 +51,7 @@ _clean_tmp() {
 }
 
 abort() {
-	epr "ABORT: ${1-}"
-	_clean_tmp
-	trap - SIGTERM SIGINT EXIT
-	kill -9 -- -$$ 2>/dev/null
+	epr "ABORT: ${1-}" 	_clean_tmp 	trap - SIGTERM SIGINT EXIT 	kill -9 -- -$$ 2>/dev/null
 	exit 1
 }
 java() { env -i java --enable-native-access=ALL-UNNAMED "$@"; }
@@ -64,9 +61,9 @@ get_prebuilts() {
 	pr "Getting prebuilts (${patches_src%/*})" >&2
 	local cl_dir=${patches_src%/*}
 	cl_dir=${TEMP_DIR}/${cl_dir,,}-rv
-	[ -d "$cl_dir" ] || mkdir "$cl_dir"
+	[ -d "$cl_dir" ] \vert{}\vert{} mkdir "$cl_dir"
 
-	for src_ver in "$cli_src CLI $cli_ver cli" "$patches_src Patches $patches_ver patches"; do
+	for src_ver in "$cli_src CLI$cli_ver cli" "$patches_src Patches$patches_ver patches"; do
 		set -- $src_ver
 		local src=$1 tag=$2 ver=${3-} fprefix=$4
 
@@ -78,13 +75,13 @@ get_prebuilts() {
 
 		local dir=${src%/*}
 		dir=${TEMP_DIR}/${dir,,}-rv
-		[ -d "$dir" ] || mkdir "$dir"
+		[ -d "$dir" ] \vert{}\vert{} mkdir "$dir"
 
 		local rv_rel="https://api.github.com/repos/${src}/releases" name_ver
 		if [ "$ver" = "dev" ]; then
 			local resp
 			resp=$(gh_req "$rv_rel" -) || return 1
-			ver=$(jq -e -r '.[] | .tag_name' <<<"$resp" | get_highest_ver) || return 1
+			ver=$(jq -e -r '.[] \vert{} .tag_name' <<<"$resp" | get_highest_ver) || return 1
 		fi
 		if [ "$ver" = "latest" ]; then
 			rv_rel+="/latest"
@@ -105,10 +102,10 @@ get_prebuilts() {
 			local resp asset name
 			resp=$(gh_req "$rv_rel" -) || return 1
 			tag_name=$(jq -r '.tag_name' <<<"$resp") || return 1
-			matches=$(jq -e '.assets | map(select(.name | (endswith("asc") or endswith("json")) | not))' <<<"$resp") || return 1
+			matches=$(jq -e '.assets \vert{} map(select(.name \vert{} (endswith("asc") or endswith("json")) \vert{} not))' <<<"$resp") || return 1
 			if [ "$(jq 'length' <<<"$matches")" -gt 1 ]; then
 				local matches_new
-				matches_new=$(jq -e -r 'map(select(.name | contains("-dev") | not))' <<<"$matches")
+				matches_new=$(jq -e -r 'map(select(.name \vert{} contains("-dev") \vert{} not))' <<<"$matches")
 				if [ "$(jq 'length' <<<"$matches_new")" -eq 1 ]; then
 					matches=$matches_new
 				fi
@@ -136,7 +133,7 @@ get_prebuilts() {
 			if [ "$grab_cl" = true ]; then echo -e "[Changelog](https://github.com/${src}/releases/tag/${tag_name})\n" >>"${cl_dir}/changelog.md"; fi
 			if [ "$REMOVE_RV_INTEGRATIONS_CHECKS" = true ]; then
 				local extensions_ext
-				extensions_ext=$(unzip -l "${file}" "extensions/shared.*" | grep -o "shared\..*") extensions_ext="${extensions_ext#*.}"
+				extensions_ext=$(unzip -l "${file}" "extensions/shared.*" \vert{} grep -o "shared\..*") extensions_ext="${extensions_ext#*.}"
 				if ! (
 					mkdir -p "${file}-zip" || return 1
 					unzip -qo "${file}" -d "${file}-zip" || return 1
@@ -177,8 +174,8 @@ config_update() {
 		t=$(toml_get_table "$table_name")
 		enabled=$(toml_get "$t" enabled) || enabled=true
 		if [ "$enabled" = "false" ]; then continue; fi
-		PATCHES_SRC=$(toml_get "$t" patches-source) || PATCHES_SRC=$DEF_PATCHES_SRC
-		PATCHES_VER=$(toml_get "$t" patches-version) || PATCHES_VER=$DEF_PATCHES_VER
+		PATCHES_SRC=$(toml_get "$t" patches-source) \vert{}\vert{} PATCHES_SRC=$DEF_PATCHES_SRC
+		PATCHES_VER=$(toml_get "$t" patches-version) \vert{}\vert{} PATCHES_VER=$DEF_PATCHES_VER
 		if [[ -v sources["$PATCHES_SRC/$PATCHES_VER"] ]]; then
 			if [ "${sources["$PATCHES_SRC/$PATCHES_VER"]}" = 1 ]; then upped+=("$table_name"); fi
 		else
@@ -191,11 +188,11 @@ config_update() {
 			else
 				last_patches=$(gh_req "$rv_rel/tags/${ver}" -) || continue
 			fi
-			if ! last_patches=$(jq -e -r '.assets[] | select(.name | (endswith("asc") or endswith("json")) | not) | .name' <<<"$last_patches"); then
+			if ! last_patches=$(jq -e -r '.assets[] \vert{} select(.name \vert{} (endswith("asc") or endswith("json")) \vert{} not) \vert{} .name' <<<"$last_patches"); then
 				abort "config_update error: '$last_patches'"
 			fi
 			if [ "$last_patches" ]; then
-				if ! OP=$(grep "^Patches: ${PATCHES_SRC%%/*}/" build.md | grep -m1 "$last_patches"); then
+				if ! OP=$(grep "^Patches: ${PATCHES_SRC\%\%/*}/" build.md \vert{} grep -m1 "$last_patches"); then
 					sources["$PATCHES_SRC/$PATCHES_VER"]=1
 					prcfg=true
 					upped+=("$table_name")
@@ -211,7 +208,7 @@ config_update() {
 			if [ -n "$query" ]; then query+=" or "; fi
 			query+=".key == \"$table\""
 		done
-		jq "to_entries | map(select(${query} or (.value | type != \"object\"))) | from_entries" <<<"$__TOML__"
+		jq "to_entries | map(select(${query} or (.value \vert{} type != \"object\"))) \vert{} from_entries" <<<"$__TOML__"
 	fi
 }
 
@@ -355,15 +352,14 @@ setup_python_backend() {
 	mkdir -p "$TEMP_DIR"
 	if [ ! -f "$TEMP_DIR/network_engine.py" ]; then
 		export PIP_BREAK_SYSTEM_PACKAGES=1
-		python3 -m pip install -q "curl-cffi>=0.15.0" "beautifulsoup4>=4.15.0" urllib3 2>/dev/null || true
+		python3 -m pip install -q "curl_cffi>=0.7.0" beautifulsoup4 urllib3 2>/dev/null || true
 		cat << 'EOF' > "$TEMP_DIR/network_engine.py"
 import sys, os, re, time, json, random
 from urllib.parse import urljoin
 
-	local apparch=('universal' 'noarch' 'arm64-v8a + armeabi-v7a')
-	if [ "$arch" != "all" ]; then
-		apparch+=("$arch")
-	fi
+def log(msg):
+    sys.stderr.write(f"[Scraper] {msg}\n")
+    sys.stderr.flush()
 
 try:
     from curl_cffi import requests
@@ -409,7 +405,6 @@ class Scraper:
         except: pass
 
     def get_soup(self, url, referer=None):
-        # We do NOT pass Accept-Language manually to let curl_cffi strictly spoof the browser
         headers = {"Referer": referer} if referer else {}
         
         # Heavy natural delay to prevent IP rate-limiting
