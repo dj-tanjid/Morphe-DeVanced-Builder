@@ -73,7 +73,6 @@ You can consider using [rvmm-zygisk-mount](https://github.com/j-hc/rvmm-zygisk-m
 <h1></h1>
 <p align="center">⭐ Star <a href="https://github.com/dj-tanjid/Morphe-DeVanced-Builder">this Repo</a> if useful</p>
 <p align="center">Maintained with ❤️ by <a href="https://github.com/dj-tanjid">dj_tanjid</a></p>
-<h1></h1>
 
 ## License
     Copyright (C) 2024-2026 Tanjidul Hossain
