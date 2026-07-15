@@ -1,3 +1,4 @@
+Google-Photos-ReVanced: 7.84.0.947289513  
 Reddit-Morphe: 2026.28.0  
 YT-Music-Morphe: 9.26.55  
 YouTube-Morphe: 21.26.366  
@@ -8,4 +9,5 @@ YouTube-Morphe: 21.26.366
 
 Patches and CLI Sources :  
 Patches: MorpheApp/patches-1.35.0-dev.5.mpp  
+Patches: RookieEnough/patches-1.0.4.mpp  
 CLI: MorpheApp/morphe-desktop-1.11.0-all.jar    
