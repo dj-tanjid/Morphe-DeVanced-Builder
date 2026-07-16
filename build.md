@@ -1,4 +1,4 @@
-Google-Photos-ReVanced: 7.84.0.947289513  
+Google-Photos-De-Vanced: 7.84.0.948508402  
 Reddit-Morphe: 2026.28.0  
 YT-Music-Morphe: 9.26.55  
 YouTube-Morphe: 21.26.366  
@@ -8,6 +8,10 @@ YouTube-Morphe: 21.26.366
 - (Optional) Import my [**Custom Settings**](../teejay/custom_settings-by_tanjid) into your application. [*How to do this?*](../teejay/?tab=readme-ov-file#import-custom-settings-in-revancedmorphe-applications)  
 
 Patches and CLI Sources :  
-Patches: MorpheApp/patches-1.35.0-dev.5.mpp  
+Patches: MorpheApp/patches-1.35.0.mpp  
+[Changelog](https://github.com/MorpheApp/morphe-patches/releases/tag/v1.35.0)
+
 Patches: RookieEnough/patches-1.0.4.mpp  
+[Changelog](https://github.com/RookieEnough/De-Vanced/releases/tag/v1.0.4)
+
 CLI: MorpheApp/morphe-desktop-1.11.0-all.jar    
