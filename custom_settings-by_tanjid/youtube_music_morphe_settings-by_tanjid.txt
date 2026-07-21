@@ -5,4 +5,4 @@
 "music_hide_cast_button": false,
 "music_hide_navigation_bar_samples_button": true,
 "music_play_permanent_repeat": true,
-"spoof_video_streams_client_type": "android_reel"
+"spoof_video_streams_player_js_hash_value": "093b19ed",
