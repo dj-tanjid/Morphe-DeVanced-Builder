@@ -75,8 +75,8 @@ You can consider using [rvmm-zygisk-mount](https://github.com/j-hc/rvmm-zygisk-m
 - And of course, [Morphe Team](https://github.com/MorpheApp), [Aaron Veil](https://github.com/anddea), [ReVanced Team](https://github.com/ReVanced) and [Sarthak Sinha](https://github.com/RookieEnough/) for their work on the Morphe/De-Vanced apps!
 
 <h1></h1>
-<p align="center">⭐ Star <a href="https://github.com/dj-tanjid/Morphe-DeVanced-Builder">this Repo</a> if useful</p>
-<p align="center">Maintained with ❤️ by <a href="https://github.com/dj-tanjid">dj_tanjid</a></p>
+<p align="center">⭐ Star <a href="https://github.com/dj-tanjid/Morphe-DeVanced-Builder">This Repo</a> if useful</p>
+<p align="center">Maintained with ❤️ by <a href="https://github.com/dj-tanjid">TanJid Creations</a></p>
 
 ## License
     Copyright (C) 2024-2026 Tanjidul Hossain
