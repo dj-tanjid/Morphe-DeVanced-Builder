@@ -5,6 +5,15 @@ shopt -s nullglob
 
 source utils.sh
 
+# --- Global Environment Export Setup for Asynchronous Background Tasks ---
+# Explicitly registers the key functions to be carried inside subshell spaces
+for func_name in _req req gh_req gh_dl build_rv patches_list patches_list_versions toml_get toml_get_table toml_get_table_names toml_get_table_main dl_direct dl_github dl_archive dl_apkmirror dl_uptodown get_direct_vers get_github_vers get_archive_vers get_apkmirror_vers get_uptodown_vers get_direct_pkg_name get_github_pkg_name get_archive_pkg_name get_apkmirror_pkg_name get_uptodown_pkg_name get_direct_resp get_github_resp get_archive_resp get_apkmirror_resp get_uptodown_resp apkmirror_search merge_splits check_sig patch_apk isoneof log get_highest_ver semver_validate get_patch_last_supported_ver list_args join_args module_config module_prop abort epr wpr pr java run_python_backend; do
+    export -f "$func_name" 2>/dev/null || true
+done
+# Export core operational paths variables 
+export MODULE_TEMPLATE_DIR CWD TEMP_DIR BIN_DIR BUILD_DIR DL_SRCS GH_HEADER NEXT_VER_CODE OS
+# --------------------------------------------------------------------------
+
 trap "abort" INT
 
 if [ "${1-}" = "clean" ]; then
@@ -159,9 +168,10 @@ wait
 _clean_tmp
 if [ -z "$(ls -A1 "${BUILD_DIR}")" ]; then abort "All builds failed."; fi
 
-log "\nInstall [Microg](https://github.com/MorpheApp/MicroG-RE/) for non-root YouTube and YT Music APKs"
-log "Use [zygisk-detach](https://github.com/j-hc/zygisk-detach) to detach YouTube and YT Music modules from Play Store"
-log "\n[revanced-magisk-module](https://github.com/j-hc/revanced-magisk-module)\n"
+log "\n- Install [ReVanced GmsCore](https://github.com/ReVanced/GmsCore/releases/latest) or [Morphe MicroG-RE](https://github.com/MorpheApp/MicroG-RE/releases/latest) for non-root YouTube, YT Music and Google Photos APKs."
+log "- (Optional) Use [zygisk-detach](https://github.com/j-hc/zygisk-detach) to detach YouTube and YT Music modules from Google Play Store."
+log "- (Optional) Import my [**Custom Settings**](../teejay/custom_settings-by_tanjid) into your application. [*How to do this?*](../teejay/?tab=readme-ov-file#import-custom-settings-in-revancedmorphe-applications)"
+log "\nPatches and CLI Sources :"
 log "$(cat "$TEMP_DIR"/*/changelog.md)"
 
 SKIPPED=$(cat "$TEMP_DIR"/skipped 2>/dev/null || :)
