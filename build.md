@@ -7,7 +7,7 @@ YouTube-Morphe: 21.29.366-SECONDARY
 - (Optional) Import my [**Custom Settings**](../teejay/custom_settings-by_tanjid) into your application. [*How to do this?*](../teejay/?tab=readme-ov-file#import-custom-settings-in-revancedmorphe-applications)  
 
 Patches and CLI Sources :  
-Patches: MorpheApp/patches-1.36.0-dev.9.mpp  
-[Changelog](https://github.com/MorpheApp/morphe-patches/releases/tag/v1.36.0-dev.9)
+Patches: MorpheApp/patches-1.36.0.mpp  
+[Changelog](https://github.com/MorpheApp/morphe-patches/releases/tag/v1.36.0)
 
-CLI: MorpheApp/morphe-desktop-1.11.0-all.jar    
+CLI: MorpheApp/morphe-desktop-1.12.0-all.jar    
