@@ -24,10 +24,10 @@ excluded-patches = """\
     'Custom branding' \
     """
 # included-patches = ""
-patches-version = "dev" # Options 'latest', 'dev', or A specific version tag
+# patches-version = "dev" # Options 'latest', 'dev', or A specific version tag
 apkmirror-dlurl = "https://www.apkmirror.com/apk/google-inc/youtube"
 uptodown-dlurl = "https://youtube.en.uptodown.com/android"
-archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.youtube"
+# archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.youtube"
 
 [YT-Music-Morphe]
 enabled = true
@@ -49,10 +49,10 @@ excluded-patches = """\
     'Custom branding' \
     """
 # included-patches = ""
-patches-version = "dev" # Options 'latest', 'dev', or A specific version tag
+# patches-version = "dev" # Options 'latest', 'dev', or A specific version tag
 apkmirror-dlurl = "https://www.apkmirror.com/apk/google-inc/youtube-music"
 uptodown-dlurl = "https://youtube-music.en.uptodown.com/android"
-archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.apps.youtube.music"
+# archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.apps.youtube.music"
 
 [YouTube-Anddea]
 enabled = false
@@ -111,10 +111,10 @@ excluded-patches = """\
     'Custom branding' \
     """
 # included-patches = ""
-patches-version = "dev" # Options 'latest', 'dev', or A specific version tag
+# patches-version = "dev" # Options 'latest', 'dev', or A specific version tag
 apkmirror-dlurl = "https://www.apkmirror.com/apk/redditinc/reddit"
 uptodown-dlurl = "https://reddit-official-app.en.uptodown.com/android"
-archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.reddit.frontpage"
+# archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.reddit.frontpage"
 
 [Google-Photos-De-Vanced]
 enabled = false
@@ -139,7 +139,7 @@ included-patches = """\
     """
 apkmirror-dlurl = "https://www.apkmirror.com/apk/google-inc/photos"
 uptodown-dlurl = "https://google-photos.en.uptodown.com/android"
-archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.apps.photos"
+# archive-dlurl = "https://archive.org/download/jhc-apks/apks/com.google.android.apps.photos"
 
 [Twitter-Piko]
 enabled = false
